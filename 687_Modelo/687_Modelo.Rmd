@@ -47,7 +47,7 @@ El ajuste se debe a la siguiente ecuación: $\sum = \sum(\theta)$, donde $\sum$ 
 
 ## Software
 
-Para el proceso de recolección de datos fue utilizado MS Excel y el análisis de los mismos se realizó utilizando el software estadístico R [@rbase].
+Para el proceso de recolección de datos fue utilizado MS Excel y el análisis de los mismos se realizó utilizando el software estadístico R [@rbase]. Todo el código para el desarrollo de los análisis se encuentra accesible en el repositorio de github [github.com/CruzJulian/687_NestMerc](https://github.com/CruzJulian/687_NestMerc)
 
 
 
