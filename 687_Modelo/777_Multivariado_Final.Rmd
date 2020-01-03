@@ -1,0 +1,1122 @@
+---
+title: "777 Multivariado"
+output:
+  word_document:
+    reference_docx: Plantilla_APA.docx
+    toc: yes
+always_allow_html: yes
+---
+
+
+# Análisis de cada factor
+
+Los resutados presentados a continuación dan cuenta del análisis multivariado realizado a cada uno de los factores incluidos en los respectivos cuestionarios. Se examinan tres aspectos en cada caso.
+
+La idoneidad de los ítems en términos de medición es revisada de manera descriptiva mediante un análisis correlacional en dos fases, primero una exploración de la matriz de correlaciones, entendiendo que debe contener correlaciones positivas fuertes entre todos los ítems; luego un análisis de componentes principales que examina la correlación múltiple de los ítems por medio de distintos estadígrafos.
+
+La consistencia interna del factor es examinada mediante dos estadísticos: el $\alpha$ de Cronbach y el $\lambda-6$ de Guttman. Ambos presentan valores en el intervalo [0, 1] con interpretaciones similares:
+
+ - De 0 a 0.3, inconsistente.
+ - De 0.3 a 0.5 consistencia baja.
+ - De 0.5 a 0.7 consistencia media.
+ - De 0.7 a 0.9 consistencia alta.
+ - De 0.9 a 1 consistencia muy alta.
+ 
+La normalidad del factor se examina por medio de dos pruebas de normalidad, la prueba Shapiro-Wilks y la prueba de Lilliefors. Ambas, por ser pruebas de hipótesis generan un p valor con la siguiente interpretación:
+
+ - p < 0.05 (no normalidad) existe evidencia estadísticamente significativa de que los datos no son normales.
+ - p > 0.05 (normalidad) no existe evidencia estadísticamente significativa de que los datos no son normales.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE, cache=FALSE}
+
+######
+# UTF-8
+######
+
+library("semPlot")
+library("lavaan")
+library("lavaanPlot")
+library("nortest")
+library("ltm")
+library("tidyr")
+library("jtools")
+library("ggplot2")
+library("stringr")
+library("dplyr")
+library("scales")
+library("googlesheets")
+library("RColorBrewer")
+library("magrittr")
+library("mice")
+library("corrplot")
+library("FactoMineR")
+library("ggrepel")
+library("knitr")
+library("purrr")
+library("mice")
+library("extrafont")
+library("pander")
+library("psych")
+library("tibble")
+
+```
+
+
+```{r echo = FALSE, message = FALSE, warning = FALSE, cache=FALSE}
+
+options(scipen=999)
+
+# opts_chunk$set(include = FALSE)
+
+loadfonts()
+
+readRDS("diccionario_777.rds") -> diccionario_777
+
+readRDS("datos-num_777.rds") -> num_777
+
+
+
+Scale_01 <- function(x){(x - min(x))/(max(x) - min(x))}
+
+#diccionario_777 %>% select(seccion, Factor) %>% unique %>% na.omit %>% filter(seccion != "satisfacción sexual") -> fact_dicc
+
+diccionario_777 %>% select(seccion, Factor) %>% unique %>% na.omit -> fact_dicc
+
+diccionario_777 %>% 
+  filter(multivariado == "sí") %$% 
+  unique(seccion) %>% 
+  sort() -> secciones
+# c("Actividad Sexual", "Consecuencia" , "Cuidado", "Elección", "comunicacíon", "Reacción emocional") -> fact_dicc
+
+# fitted_factors <- list()
+
+```
+
+
+
+```{r exploratorio, eval = FALSE, include = FALSE, echo = FALSE}
+diccionario_777 %$% extract(rotulo, Calif != "no") -> items_validos
+
+
+col <- colorRampPalette(c("#ccc000", "#ddd999", "#eeeeee", "#999ddd", "#000ccc"))
+
+
+num_777[items_validos] %>% cor %>% corrplot(method = "color", hclust.method = "ward.D")
+
+num_777[items_validos] %>% cor %>% corrplot.mixed(lower = "number", upper = "color", family = "Times New Roman", lower.col = "#aaaaaa", number.cex = 0.6, tl.cex = 0.6)
+  
+  
+
+```
+
+
+```{r, include = FALSE, message = FALSE, warning = FALSE}
+diccionario_777 %>% 
+  filter(multivariado == "sí") %>% 
+  select(rotulo_antes, rotulo, texto, seccion, Factor, Respuesta, Calif) %>% 
+  group_by(seccion, Factor) %>% 
+  nest() %>% 
+  mutate(
+    bases_datos = lapply(data, function(x) num_777[x$rotulo]),
+    acp = lapply(bases_datos, PCA, graph = FALSE),
+    alphas = lapply(bases_datos, alpha, check.keys=TRUE),
+    shapiro = lapply(acp, function(x) x %$% ind %$% coord %>% as.data.frame %$% shapiro.test(Dim.1)),
+    lillie = lapply(acp, function(x) x %$% ind %$% coord %>% as.data.frame %$% lillie.test(Dim.1))
+  ) %>% 
+  arrange(seccion) -> completo_analisis
+
+
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+codigo_uni <- "777_multivariado_plantilla-rmd.txt"
+
+fileconn <- file(codigo_uni)
+readLines(con = fileconn) -> plantilla
+close(fileconn)
+
+
+
+```
+
+
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+multivariado <- function(factor, plantilla_rmd){
+str_replace_all(plantilla_rmd, "factor_nombre", factor) %>% paste(collapse = "\n") 
+}
+
+ 
+     
+```
+
+
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+completo_analisis %$% 
+  Map(multivariado, factor = Factor, list(plantilla)) %>% 
+  unlist -> childs
+
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+child_files <- paste0("child-", 1:9, ".rmd")
+
+fileconn <- file(child_files[1])
+writeLines(childs[1], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[2])
+writeLines(childs[2], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[3])
+writeLines(childs[3], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[4])
+writeLines(childs[4], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[5])
+writeLines(childs[5], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[6])
+writeLines(childs[6], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[7])
+writeLines(childs[7], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[8])
+writeLines(childs[8], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[9])
+writeLines(childs[9], con = fileconn)
+close(fileconn)
+
+
+```
+
+
+
+
+```{r}
+sec <- secciones[1]
+completo_analisis %>% 
+  filter(seccion == sec) -> seccion_analisis
+
+```
+
+
+## `r sec`
+
+En esta sección se presentan los resultados asociados al formulario de `r sec`. 
+
+### Resumen
+
+La siguente tabla presenta un resumen:
+
+```{r}
+# seccion_analisis %>% 
+#   transmute(
+#     Factor = Factor,
+#     numero_items = lapply(data, nrow) %>% unlist,
+#     varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+#     alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+#     alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist, 
+#     sw_pv = lapply(shapiro, extract2, "p.value") %>% unlist,
+#     lil_pv = lapply(lillie, extract2, "p.value") %>% unlist
+#   ) %>% 
+#   setNames(c("Factor", "CI", "Var ACP", "Cron", "Gutt", "SW", "Lillie")) %>% 
+#   kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los nuevos factores. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; SW: P valor de la prueba Shapiro Wilks para normalidad; Lillie: P valor de la prueba lilliefors para normalidad. Fuente: elaboración propia.")
+
+```
+
+
+```{r child = child_files[1]}
+```
+
+
+```{r child = child_files[2]}
+```
+
+
+```{r child = child_files[3]}
+```
+
+
+```{r child = child_files[4]}
+```
+
+
+
+
+
+
+
+```{r}
+sec <- secciones[2]
+completo_analisis %>% 
+  filter(seccion == sec) -> seccion_analisis
+
+```
+
+
+## `r sec`
+
+En esta sección se presentan los resultados asociados al formulario de `r sec`. 
+
+### Resumen
+
+La siguente tabla presenta un resumen:
+
+```{r}
+seccion_analisis %>% 
+  transmute(
+    Factor = Factor,
+    numero_items = lapply(data, nrow) %>% unlist,
+    varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+    alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+    alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist, 
+    sw_pv = lapply(shapiro, extract2, "p.value") %>% unlist,
+    lil_pv = lapply(lillie, extract2, "p.value") %>% unlist
+  ) %>% 
+  setNames(c("Factor", "CI", "Var ACP", "Cron", "Gutt", "SW", "Lillie")) %>% 
+  kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los nuevos factores. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; SW: P valor de la prueba Shapiro Wilks para normalidad; Lillie: P valor de la prueba lilliefors para normalidad. Fuente: elaboración propia.")
+
+```
+
+
+
+```{r child = child_files[5]}
+```
+
+
+```{r child = child_files[6]}
+```
+
+
+```{r child = child_files[7]}
+```
+
+
+
+
+
+
+
+
+```{r}
+sec <- secciones[3]
+completo_analisis %>% 
+  filter(seccion == sec) -> seccion_analisis
+
+```
+
+
+## `r sec`
+
+En esta sección se presentan los resultados asociados al formulario de `r sec`. 
+
+### Resumen
+
+La siguente tabla presenta un resumen:
+
+```{r}
+seccion_analisis %>% 
+  transmute(
+    Factor = Factor,
+    numero_items = lapply(data, nrow) %>% unlist,
+    varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+    alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+    alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist, 
+    sw_pv = lapply(shapiro, extract2, "p.value") %>% unlist,
+    lil_pv = lapply(lillie, extract2, "p.value") %>% unlist
+  ) %>% 
+  setNames(c("Factor", "CI", "Var ACP", "Cron", "Gutt", "SW", "Lillie")) %>% 
+  kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los nuevos factores. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; SW: P valor de la prueba Shapiro Wilks para normalidad; Lillie: P valor de la prueba lilliefors para normalidad. Fuente: elaboración propia.")
+
+```
+
+
+
+```{r child = child_files[8]}
+```
+
+
+```{r child = child_files[9]}
+```
+
+
+
+
+
+
+
+
+```{r}
+completo_analisis %$% paste(seccion, Factor) -> ff_names
+
+completo_analisis %$% 
+  acp %>% 
+  lapply(extract2, "ind") %>% 
+  lapply(extract2, "coord") %>% 
+  lapply(as_tibble) %>% 
+  lapply(extract2, "Dim.1") %>% 
+  setNames(ff_names) -> fitted_factors
+
+saveRDS(fitted_factors, "fitted_factors.rds")
+
+```
+
+
+
+# Consolidación de cada factor
+
+En vista de que los factores propuestos y evaluados en las secciones anteriores presentan distintos grados de consistencia interna, se decide retirar los factores más pobremente representados y conservar los indispensables para la realización de los modelos de ecuaciones estructurales. La Tabla muestra los factores retenidos para el análisis.
+
+
+```{r}
+readRDS("fitted_factors.rds") -> fitted_factors
+readRDS("diccionario_777.rds") -> diccionario_777
+readRDS("datos-num_777.rds") -> num_777
+
+```
+
+
+```{r}
+tibble(
+  Factor = names(fitted_factors),
+  Rótulo =   c("PeRi_AcSe", "PeRi_Co", "PeRi_Cu", "PeRi_El", "Pr_AcSe", "Pr_El", "Pr_Cu", "SaSe_Co", "SaSe_ReEm"),
+  conservar = c(1, 0, 0, 1, 1, 0, 0, 1, 1)
+) %>% 
+  filter(conservar == 1) %>% 
+  select(Factor, Rótulo) -> factores_conservados
+
+factores_conservados %>% 
+  kable(caption = "Tabla: Factores retenidos para el análisis. Fuente: elaboración propia.")
+
+```
+
+
+
+```{r, message = FALSE, warning=FALSE}
+
+items_por_factor <- 6
+
+fitted_factors %>% 
+  extract(factores_conservados[["Factor"]]) %>% 
+  setNames(factores_conservados[["Rótulo"]]) -> 
+  selected_fitted_factors
+
+diccionario_777 %>% 
+  select(Factor, seccion, rotulo, texto) %>% 
+  na.omit() -> items
+
+items %$% 
+  expand.grid(
+    rotulo = rotulo, 
+    fact = names(selected_fitted_factors), 
+    stringsAsFactors = FALSE) %>% 
+  mutate(
+    correl = Map(
+      function(name_x, name_y) {
+        cor(num_777[[name_x]], selected_fitted_factors[[name_y]])
+        },
+                 rotulo,
+                 fact
+    ) %>% unlist %>% abs
+  ) %>% inner_join(items) -> correlations
+
+correlations %>%
+  group_by(rotulo) %>%
+  nest() %>% # glimpse
+  mutate(
+    mayor_correlacion = lapply(data, arrange, desc(correl)) %>% lapply(head, 1),
+    tabla_individual = Map(data.frame, rotulo = rotulo, mayor_correlacion, stringsAsFactors = FALSE)
+  ) %$% 
+  bind_rows(tabla_individual) %>%
+  group_by(fact) %>%
+  nest() %>% # glimpse
+  mutate(
+    mayor_correlacion = lapply(data, arrange, desc(correl)) %>% lapply(head, items_por_factor),
+    tabla_individual = Map(data.frame, fact = fact, mayor_correlacion, stringsAsFactors = FALSE)
+  ) %$% bind_rows(tabla_individual)  -> best_correlations
+
+
+```
+
+
+
+Con el fin de facilitar el cálculo, la representación y la interpretación de los modelos de ecuaciones estructurales, se realiza un análisis de correlaciones que busca los `r items_por_factor` ítems más correlacionados con cada factor y retira los demás. 
+
+
+```{r, message=FALSE, warning=FALSE}
+# correl_umbral <- 0.45
+
+best_correlations %>% #filter(correl > correl_umbral) %>% 
+  group_by(Factor, seccion) %>% 
+  nest() %>% mutate(
+    bases_datos = lapply(data, function(x) num_777[x$rotulo]),
+    acp = lapply(bases_datos, PCA, graph = FALSE),
+    alphas = lapply(bases_datos, alpha, check.keys=TRUE),
+    shapiro = lapply(acp, function(x) x %$% ind %$% coord %>% as.data.frame %$% shapiro.test(Dim.1)),
+    lillie = lapply(acp, function(x) x %$% ind %$% coord %>% as.data.frame %$% lillie.test(Dim.1))
+  ) %>% arrange(seccion) -> completo_analisis
+
+# completo_analisis %$% lapply(acp, plot, choix = "ind")
+# 
+# completo_analisis %>% 
+#   transmute(
+#     fact,
+#     numero_items = lapply(data, nrow) %>% unlist,
+#     varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+#     alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+#     alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist
+#   ) %>% inner_join(factores_conservados, by = c("fact" = "Rótulo")) %>% 
+#   setNames(c("Rótulo", "CI", "Var ACP", "Cron", "Gutt", "Factor")) %>% 
+#   extract(c("Factor", "Rótulo", "CI", "Var ACP", "Cron", "Gutt")) %>% 
+#   arrange(Factor) %>% 
+#   kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los nuevos factores. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman. Fuente: elaboración propia.")
+
+```
+
+
+
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+completo_analisis %$% 
+  Map(multivariado, factor = Factor, list(plantilla)) %>% 
+  unlist -> childs
+
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+child_files <- paste0("new_child-", 1:5, ".rmd")
+
+fileconn <- file(child_files[1])
+writeLines(childs[1], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[2])
+writeLines(childs[2], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[3])
+writeLines(childs[3], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[4])
+writeLines(childs[4], con = fileconn)
+close(fileconn)
+fileconn <- file(child_files[5])
+writeLines(childs[5], con = fileconn)
+close(fileconn)
+
+
+
+```
+
+
+
+
+```{r}
+sec <- secciones[1]
+completo_analisis %>% 
+  filter(seccion == sec) -> seccion_analisis
+
+```
+
+
+## `r sec`
+
+En esta sección se presentan los resultados asociados al formulario de `r sec`. 
+
+### Resumen
+
+La siguente tabla presenta un resumen:
+
+```{r}
+seccion_analisis %>% 
+  transmute(
+    Factor = Factor,
+    numero_items = lapply(data, nrow) %>% unlist,
+    varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+    alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+    alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist, 
+    sw_pv = lapply(shapiro, extract2, "p.value") %>% unlist,
+    lil_pv = lapply(lillie, extract2, "p.value") %>% unlist
+  ) %>% 
+  setNames(c("Factor", "CI", "Var ACP", "Cron", "Gutt", "SW", "Lillie")) %>% 
+  kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los nuevos factores. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; SW: P valor de la prueba Shapiro Wilks para normalidad; Lillie: P valor de la prueba lilliefors para normalidad. Fuente: elaboración propia.")
+
+```
+
+
+```{r child = child_files[1]}
+```
+
+
+```{r child = child_files[2]}
+```
+
+
+
+
+
+
+
+
+```{r}
+sec <- secciones[2]
+completo_analisis %>% 
+  filter(seccion == sec) -> seccion_analisis
+
+```
+
+
+## `r sec`
+
+En esta sección se presentan los resultados asociados al formulario de `r sec`. 
+
+### Resumen
+
+La siguente tabla presenta un resumen:
+
+```{r}
+seccion_analisis %>% 
+  transmute(
+    Factor = Factor,
+    numero_items = lapply(data, nrow) %>% unlist,
+    varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+    alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+    alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist, 
+    sw_pv = lapply(shapiro, extract2, "p.value") %>% unlist,
+    lil_pv = lapply(lillie, extract2, "p.value") %>% unlist
+  ) %>% 
+  setNames(c("Factor", "CI", "Var ACP", "Cron", "Gutt", "SW", "Lillie")) %>% 
+  kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los nuevos factores. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; SW: P valor de la prueba Shapiro Wilks para normalidad; Lillie: P valor de la prueba lilliefors para normalidad. Fuente: elaboración propia.")
+
+```
+
+
+
+```{r child = child_files[3]}
+```
+
+
+
+
+
+
+
+
+```{r}
+sec <- secciones[3]
+completo_analisis %>% 
+  filter(seccion == sec) -> seccion_analisis
+
+```
+
+
+## `r sec`
+
+En esta sección se presentan los resultados asociados al formulario de `r sec`. 
+
+### Resumen
+
+La siguente tabla presenta un resumen:
+
+```{r}
+seccion_analisis %>% 
+  transmute(
+    Factor = Factor,
+    numero_items = lapply(data, nrow) %>% unlist,
+    varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+    alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+    alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist, 
+    sw_pv = lapply(shapiro, extract2, "p.value") %>% unlist,
+    lil_pv = lapply(lillie, extract2, "p.value") %>% unlist
+  ) %>% 
+  setNames(c("Factor", "CI", "Var ACP", "Cron", "Gutt", "SW", "Lillie")) %>% 
+  kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los nuevos factores. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; SW: P valor de la prueba Shapiro Wilks para normalidad; Lillie: P valor de la prueba lilliefors para normalidad. Fuente: elaboración propia.")
+
+```
+
+
+```{r, eval=FALSE, include=FALSE}
+c("periacse", "periel", "pracse", "saseco", "sasereem") -> ppp_names
+
+completo_analisis %$% 
+  lapply(acp, "[[", "ind") %>% 
+  lapply("[[", "coord") %>% 
+  lapply(as_tibble) %>% 
+  lapply("[[", "Dim.1") %>% 
+  setNames(ppp_names) %>% 
+  as_tibble() -> ppp
+
+
+ggplot(ppp) + aes(x = periel, y = sasereem) + geom_point() + geom_smooth(method = "lm")
+
+
+```
+
+
+
+```{r child = child_files[4]}
+```
+
+
+```{r child = child_files[5]}
+```
+
+
+
+
+
+
+```{r}
+# best_correlations %>% filter(correl > correl_umbral) -> nuevos_factores
+
+best_correlations -> nuevos_factores
+
+nuevos_factores %>% 
+  setNames(c("Rótulo", "Ítem", "Correlación", "Factor", "Sección", "Texto")) %>% 
+  kable(digits = 2, caption = "Tabla: definición de los nuevos factores a partir de los 5 ítems de mayor correlación.")
+
+# nuevos_factores %>% saveRDS("nuevos_factores.rds")
+
+```
+
+
+
+
+# Modelos SEM
+
+```{r}
+opts_chunk$set(fig.width = 8.5, fig.height = 10, echo = FALSE, message = FALSE, warning = FALSE)
+
+bootstrap_pvalue <- function(bootstrapped){
+  min(mean(bootstrapped > 0), mean(bootstrapped < 0))*2
+  }
+
+bootstrapp_runs <- 1000
+
+```
+
+
+
+
+```{r}
+nuevos_factores %>% select(rotulo, fact) %>% unique %>% na.omit %>% 
+  mutate(nombre_fact = str_replace_all(fact, " ", "_")) %$% 
+  split(rotulo, nombre_fact) -> observables_por_factor
+
+# observables_por_factor %>% lapply(length) %>% unlist %>% ">"(2) %>% which -> cuales
+
+observables_por_factor %>%  
+  lapply(paste, collapse = " + ") %>% Map(paste, names(.), " =~ ", .) %>% unlist -> formulas_basicas
+
+# cfa(ppp[[7]], data = num_777)  
+
+```
+
+
+
+## Primer modelo
+
+El primer modelo tiene como objetivo evaluar la mediación de la satisfacción sexual entre la percepción del riesgo y las prácticas. La primera tabla muestra los resultados de las estimaciones.
+
+```{r}
+paste0(formulas_basicas, c(" + SaSe_Co + SaSe_ReEm", " + SaSe_Co + SaSe_ReEm", "", " + Pr_AcSe", " + Pr_AcSe")) -> formula_basica_modelo_1
+
+
+# formula_basica_modelo_1 <- c("Práctica_Actividad_Sexual =~ Satisfacción_sexual_Comunicación + Satisfacción_sexual_Reacción_emocional", "Satisfacción_sexual_Comunicación =~ Percepción_de_riesgo_Actividad_Sexual + Percepción_de_riesgo_Elección", "Satisfacción_sexual_Reacción_emocional =~ Percepción_de_riesgo_Actividad_Sexual + Percepción_de_riesgo_Elección")
+
+formula_basica_modelo_1 %>% 
+  paste(collapse = "\n") %>% 
+    sem(data = num_777, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo_1
+
+# modelo_1 %>% summary(standardized = TRUE, fit.measures = TRUE)
+
+modelo_1 %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores calculados del modelo. Fuente: elaboración propia.")
+
+```
+
+Los estadísticos presentados dan cuenta de diferentes características del modelo, entre ellas parsimonia, significancia y ajuste.
+
+```{r}
+modelo_1 %>% 
+  fitmeasures() %>% 
+  round(4) %>% 
+  tibble(Estimate = names(.), Value = .) %>% 
+  kable(digits = 4, caption = "Tabla: Estadísticos de bondad de ajuste del modelo. Fuente: Elaboracion propia.")
+
+```
+
+Como se vio en las pruebas de normalidad de cada factor, el supuesto de normalidad del modelo en general no se cumple. Este defecto se suple calculando la significancia de los coeficientes mediante un proceso de bootstrapping.
+
+
+```{r, message=FALSE, warning=FALSE}
+
+bootstrapLavaan(modelo_1, R = bootstrapp_runs) %>% as_tibble() -> bootstrapped_coefs #235 segundos 
+
+
+bootstrapped_coefs %>% 
+  gather("coeficiente", "valor") %>% 
+  filter(str_detect(coeficiente, "=")) %>% 
+  group_by(coeficiente) %>% 
+  summarise(
+    estimate = mean(valor),
+    std.error = sd(valor),
+    min = min(valor),
+    q25 = quantile(valor, .25),
+    q50 = quantile(valor, .5),
+    q75 = quantile(valor, .75),
+    max = max(valor),
+    p_valor = bootstrap_pvalue(valor)
+  ) %>% kable(digits = 2, caption = "Tabla: Estimadores y cuantiles vía bootstrapping.")
+
+# bootstrapped_coefs %>% gather("coeficiente", "valor") %>% ggplot + aes(x = coeficiente, y = valor) + geom_boxplot() + coord_flip()
+
+
+```
+
+
+
+```{r, fig.cap = "Figura: Diagrama del modelo. Fuente: elaboración propia."}
+lavaanPlot(model = modelo_1, node_options = list(shape = "box"), edge_options = list(color = "grey"), coefs = T)
+
+semPaths(
+  modelo_1,
+  # "std",
+  whatLabels="std", 
+  intercepts=FALSE,
+  style="lisrel",
+  nCharNodes=0, 
+  nCharEdges=0,
+  curveAdjacent = TRUE,
+  title=FALSE, 
+  layout="tree2",
+  curvePivot=TRUE
+  ) -> ppp
+
+```
+
+
+```{r fig.height = 10, fig.width = 8}
+library("igraph")
+library("ggraph")
+library("ggrepel")
+
+
+
+formula_basica_modelo_1 %>% 
+  paste(collapse = " ") %>% 
+  str_remove_all("[=~+]") %>% 
+  str_split(" ") %>% 
+  unlist %>% 
+  extract(str_count(.) > 0) %>% 
+  unique %>% 
+  enframe(name = "id", value = "name") %>%
+  extract(c("name", "id")) %>% 
+  mutate(
+    is_direct = 1 - as.numeric(name %in% nuevos_factores[["rotulo"]])
+    ) %>% 
+  arrange(is_direct) -> gg_nodes
+
+modelo_1 %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  mutate(
+    est = round(est, 2), 
+    line_width = abs(est)
+      ) %>% 
+  select(lhs, rhs, est, line_width) %>% 
+  setNames(c("from", "to", "Est", "line_width")) -> gg_ties
+
+graph_from_data_frame(d = gg_ties, vertices = gg_nodes, directed = TRUE) -> final_tree
+
+final_tree %>% ggraph(layout = "gem") + 
+  geom_node_circle(
+    aes(alpha = is_direct, r = 40, colour = is_direct),
+    fill = "#ffffff",
+    show.legend = FALSE
+    ) + 
+  geom_node_label(
+    aes(size = 1, label = name, alpha = 1 - is_direct), 
+    fill = "#dddddd", 
+    colour = NA, 
+    size = 2.5,
+    show.legend = FALSE
+    ) +
+  geom_edge_diagonal(
+    aes(label = Est, edge_width = line_width), 
+    colour = "#bbbbbb",
+    arrow = arrow(45, unit(.2, "cm"), type = "closed"),
+    start_cap = circle(10, 'mm'),
+    end_cap = circle(10, 'mm'),
+    label_size = 2.5,
+    show.legend = FALSE
+    ) + 
+  geom_node_text(
+    aes(label = name),
+    size = 2.5
+    ) +
+  scale_alpha(range = 0:1) +
+  scale_edge_width_continuous(range = c(0.5, 1.5)) +
+  scale_color_continuous(low = "#ffffff", high = "#000000") +
+  # geom_node_circle(aes(r = 1, fill = is_direct)) +
+  # coord_flip() +
+  theme_void()
+
+
+```
+
+## Segundo modelo
+
+```{r, fig.cap="Figura: Gráfico de cajas y bigotes de las réplicas provenientes del procedimiento de bootstrap."}
+paste0(formulas_basicas, c("", "", "", " + Pr_AcSe", " + Pr_AcSe")) %>% "["(c(3, 4, 5)) -> formula_basica_modelo_2
+
+
+# formula_basica_modelo_1 <- c("Práctica_Actividad_Sexual =~ Satisfacción_sexual_Comunicación + Satisfacción_sexual_Reacción_emocional", "Satisfacción_sexual_Comunicación =~ Percepción_de_riesgo_Actividad_Sexual + Percepción_de_riesgo_Elección", "Satisfacción_sexual_Reacción_emocional =~ Percepción_de_riesgo_Actividad_Sexual + Percepción_de_riesgo_Elección")
+
+formula_basica_modelo_2 %>% 
+  paste(collapse = "\n") %>% 
+  sem(data = num_777, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo_2
+# modelo_1 %>% summary(standardized = TRUE, fit.measures = TRUE)
+
+modelo_2 %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores calculados del modelo. Fuente: elaboración propia.")
+
+```
+
+Los estadísticos presentados dan cuenta de diferentes características del modelo, entre ellas parsimonia, significancia y ajuste.
+
+```{r}
+modelo_2 %>% 
+  fitmeasures() %>% 
+  round(4) %>% 
+  as_tibble(rownames = "estimate") %>% 
+  kable(digits = 4, caption = "Tabla: Estadísticos de bondad de ajuste del modelo. Fuente: Elaboracion propia.")
+
+```
+
+Como se vio en las pruebas de normalidad de cada factor, el supuesto de normalidad del modelo en general no se cumple. Este defecto se suple calculando la significancia de los coeficientes mediante un proceso de bootstrapping.
+
+
+```{r, message=FALSE, warning=FALSE}
+
+bootstrapLavaan(modelo_2, R = bootstrapp_runs) %>% as_tibble() -> bootstrapped_coefs #235 segundos 
+
+
+bootstrapped_coefs %>% 
+  gather("coeficiente", "valor") %>% 
+  filter(str_detect(coeficiente, "=")) %>% 
+  group_by(coeficiente) %>% 
+  summarise(
+    estimate = mean(valor),
+    std.error = sd(valor),
+    min = min(valor),
+    q25 = quantile(valor, .25),
+    q50 = quantile(valor, .5),
+    q75 = quantile(valor, .75),
+    max = max(valor),
+    p_valor = bootstrap_pvalue(valor)
+  ) %>% kable(digits = 2, caption = "Tabla: Estimadores y cuantiles vía bootstrapping.")
+
+# bootstrapped_coefs %>% gather("coeficiente", "valor") %>% ggplot + aes(x = coeficiente, y = valor) + geom_boxplot() + coord_flip()
+
+
+```
+
+
+
+```{r, fig.cap = "Figura: Diagrama del modelo. Fuente: elaboración propia."}
+lavaanPlot(model = modelo_1, node_options = list(shape = "box"), edge_options = list(color = "grey"), coefs = T)
+
+semPaths(
+  modelo_2,
+  # "std",
+  whatLabels="std", 
+  intercepts=FALSE,
+  style="lisrel",
+  nCharNodes=0, 
+  nCharEdges=0,
+  curveAdjacent = TRUE,
+  title=FALSE, 
+  layout="tree2",
+  curvePivot=TRUE
+  ) 
+
+```
+
+
+
+## Tercer modelo
+
+```{r, fig.cap="Figura: Gráfico de cajas y bigotes de las réplicas provenientes del procedimiento de bootstrap."}
+c(formulas_basicas[1:3], c("Pr_AcSe ~~ PeRi_AcSe", "PeRi_AcSe ~~ PeRi_El", "PeRi_El ~~ Pr_AcSe")) -> formula_basica_modelo_3
+
+
+# formula_basica_modelo_1 <- c("Práctica_Actividad_Sexual =~ Satisfacción_sexual_Comunicación + Satisfacción_sexual_Reacción_emocional", "Satisfacción_sexual_Comunicación =~ Percepción_de_riesgo_Actividad_Sexual + Percepción_de_riesgo_Elección", "Satisfacción_sexual_Reacción_emocional =~ Percepción_de_riesgo_Actividad_Sexual + Percepción_de_riesgo_Elección")
+
+formula_basica_modelo_3 %>% 
+  paste(collapse = "\n") %>% 
+  sem(data = num_777, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo_3
+
+modelo_3 %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores calculados del modelo. Fuente: elaboración propia.")
+
+```
+
+Los estadísticos presentados dan cuenta de diferentes características del modelo, entre ellas parsimonia, significancia y ajuste.
+
+```{r}
+modelo_3 %>% 
+  fitmeasures() %>% 
+  round(4) %>% 
+  as_tibble(rownames = "estimate") %>% 
+  kable(digits = 4, caption = "Tabla: Estadísticos de bondad de ajuste del modelo. Fuente: Elaboracion propia.")
+
+```
+
+Como se vio en las pruebas de normalidad de cada factor, el supuesto de normalidad del modelo en general no se cumple. Este defecto se suple calculando la significancia de los coeficientes mediante un proceso de bootstrapping.
+
+
+```{r, message=FALSE, warning=FALSE}
+
+bootstrapLavaan(modelo_3, R = bootstrapp_runs) %>% as_tibble() -> bootstrapped_coefs #235 segundos 
+
+
+bootstrapped_coefs %>% 
+  gather("coeficiente", "valor") %>% 
+  filter(str_detect(coeficiente, "=")) %>% 
+  group_by(coeficiente) %>% 
+  summarise(
+    estimate = mean(valor),
+    std.error = sd(valor),
+    min = min(valor),
+    q25 = quantile(valor, .25),
+    q50 = quantile(valor, .5),
+    q75 = quantile(valor, .75),
+    max = max(valor),
+    p_valor = bootstrap_pvalue(valor)
+  ) %>% kable(digits = 2, caption = "Tabla: Estimadores y cuantiles vía bootstrapping.")
+
+# bootstrapped_coefs %>% gather("coeficiente", "valor") %>% ggplot + aes(x = coeficiente, y = valor) + geom_boxplot() + coord_flip()
+
+
+```
+
+
+
+```{r, fig.cap = "Figura: Diagrama del modelo. Fuente: elaboración propia."}
+lavaanPlot(model = modelo_1, node_options = list(shape = "box"), edge_options = list(color = "grey"), coefs = T)
+
+semPaths(
+  modelo_3,
+  # "std",
+  whatLabels="std", 
+  intercepts=FALSE,
+  style="lisrel",
+  nCharNodes=0, 
+  nCharEdges=0,
+  curveAdjacent = TRUE,
+  title=FALSE, 
+  layout="tree2",
+  curvePivot=TRUE
+  ) 
+
+```
+
+
+
+## Cuarto modelo
+
+```{r, fig.cap="Figura: Gráfico de cajas y bigotes de las réplicas provenientes del procedimiento de bootstrap."}
+paste0(formulas_basicas, c(" + Pr_AcSe", " + Pr_AcSe", "", " + Pr_AcSe", " + Pr_AcSe")) -> formula_basica_modelo_4
+
+formula_basica_modelo_4 %>% 
+  paste(collapse = "\n") -> formula_completa
+
+  sem(formula_completa, data = num_777, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo_4
+
+modelo_4 %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores calculados del modelo. Fuente: elaboración propia.")
+
+```
+
+Los estadísticos presentados dan cuenta de diferentes características del modelo, entre ellas parsimonia, significancia y ajuste.
+
+```{r}
+modelo_4 %>% 
+  fitmeasures() %>% 
+  round(4) %>% 
+  as_tibble(rownames = "estimate") %>% 
+  kable(digits = 4, caption = "Tabla: Estadísticos de bondad de ajuste del modelo. Fuente: Elaboracion propia.")
+
+```
+
+Como se vio en las pruebas de normalidad de cada factor, el supuesto de normalidad del modelo en general no se cumple. Este defecto se suple calculando la significancia de los coeficientes mediante un proceso de bootstrapping.
+
+
+```{r, message=FALSE, warning=FALSE}
+
+bootstrapLavaan(modelo_4, R = bootstrapp_runs) %>% as_tibble() -> bootstrapped_coefs #235 segundos 
+
+
+bootstrapped_coefs %>% 
+  gather("coeficiente", "valor") %>% 
+  filter(str_detect(coeficiente, "=")) %>% 
+  group_by(coeficiente) %>% 
+  summarise(
+    estimate = mean(valor),
+    std.error = sd(valor),
+    min = min(valor),
+    q25 = quantile(valor, .25),
+    q50 = quantile(valor, .5),
+    q75 = quantile(valor, .75),
+    max = max(valor),
+    p_valor = bootstrap_pvalue(valor)
+  ) %>% kable(digits = 2, caption = "Tabla: Estimadores y cuantiles vía bootstrapping.")
+
+# bootstrapped_coefs %>% gather("coeficiente", "valor") %>% ggplot + aes(x = coeficiente, y = valor) + geom_boxplot() + coord_flip()
+
+
+```
+
+
+
+```{r, fig.cap = "Figura: Diagrama del modelo. Fuente: elaboración propia."}
+lavaanPlot(model = modelo_1, node_options = list(shape = "box"), edge_options = list(color = "grey"), coefs = T)
+
+semPaths(
+  modelo_4,
+  # "std",
+  whatLabels="std", 
+  intercepts=FALSE,
+  style="lisrel",
+  nCharNodes=0, 
+  nCharEdges=0,
+  curveAdjacent = TRUE,
+  title=FALSE, 
+  layout="tree2",
+  curvePivot=TRUE
+  ) 
+
+
+
+
+```
+
+
+

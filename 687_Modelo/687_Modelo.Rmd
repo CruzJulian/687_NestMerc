@@ -1,0 +1,621 @@
+---
+title: "687_Modelo"
+output:
+  word_document:
+    reference_docx: Plantilla_APA.docx
+  toc: yes
+bibliography: 687_Modelo_biblio.bib
+csl: apa.csl
+
+---
+
+# Marco metodológico
+
+## Consistencia interna
+
+En los casos donde todas las variables son mediciones indirectas distintas de un mismo aspecto no medible, se hace referencia a la propiedad denominada consistencia interna. La consistencia interna consiste en la propiedad de las variables en estar altamente correlacionadas entre sí, lo que indica que están asociadas a un trazo latente. Dado que esta consistencia interna se encuentra reflejada en a estructura de correlación de las variables es posible medirla y analizarla. El Alfa de Cronbach [@Cronbach1951] es una de las medidas más usadas para analizar la consistencia entre variables.
+
+Dados $K$ variables $Y_1, Y_2, ..., Y_K$ y su suma $X = Y_1 + Y_2 + ... + Y_K$, el Alfa de Chronbach está dado por la expresión
+
+$$\alpha = \frac{K}{K-1} \left(1-\frac{\sum_{i = 1}^K \sigma^2_{Y_i}}{\sigma^2_X}\right)$$
+
+## Análisis de componentes principales
+
+El Análisis de Componentes Principales (ACP) [@Jolliffe2002] consiste en utilizar herramientas de álgebra lineal para reducir la dimensión de los datos. Cada registro de una base de datos es visto como un punto en el espacio vectorial $p$-dimensional; mediante una traslación y una rotación óptimas la nube de puntos es reubicada en un subespacio de dimensión menor con una pérdida mínima de información.
+
+Este subespacio queda expresado en un número menor de dimensiones $p'$ representadas por sus respectivos ejes. La inercia se distribuye en estos ejes de manera descendente; así, el primer eje recoge la mayor cantidad de inercia lineal presente en la nube de puntos, el segundo la mayor cantidad restante, etc. Cada ejercicio arroja una tabla denominada tabla de autovalores que muestra la cantidad de inercia recogida por cada eje, tanto de manera absoluta como porcentual. Los planos construidos a partir de estos ejes mapean la nube de puntos guardando la mayor cantidad de información posible.
+
+## Bootstrap
+
+Se entiende por bootstrapping un conjunto de técnicas de estimación basadas en remuestreo. Este tipo de estimación consiste en realizar muestreos con remplazo a través de simulación montecarlo obteniendo una colección de submuestras. La información presente en estas submuestras es usada en los procesos de corroboración de hipótesis y construcción de intervalos de confianza [@EfroTibs93].
+
+La teoría explica que los resultados obtenidos usando este método no dependen de las características deistribucionales de la población muestreada, al contrario de los métodos analíticos. Por este motivo, es un método ideal para realizar la estimación de intervalos de confianza y la corroboración de hipótesis en escenarios donde los supuestos distribucionales de los modelos fallan.
+
+
+## Modelos de Ecuaciones Estructurales
+
+Según [@Bagozzi2012] los modelos de ecuaciones estructurales son procedimientos estadísticos para probar hipótesis de medición, funcionales, predictivas y causales. Existen dos tipos de modelos de ecuaciones estructurales, los exploratorios y los confirmatorios. Un análisis exploratorio parte de los datos para dar luces respecto a su comportamiento y así componer estructuras de relaciones entre las variables; el PCA antes explicado es un modelo exploratorio. Un análisis confirmatorio parte de un sistema de ecuaciones hipotóticas propuesto por los autores que luego se corroboran (o desestiman) por medio de la estimación de sus parámetros basada en datos.
+
+Adicionalmente, los modelos de ecuaciones estructurales completo teniendo en cuenta a [@ruiz2010modelos], se deben a dos modelos fundamentales, el modelo de media y el modelo de relaciones estructurales. 
+
+El modelo de media permite que cada variable latente esta medida por indicadores observables, de manera que, dependiendo de la relación entre sí se puede identificar que los errores pueden afectar las mediciones de las otras variables o solo influir sobre sí misma. Y el modelo de relaciones estructurales proporciona los efectos y relaciones de variables, adicionalmente presenta los modelos de predicción.
+
+Por lo tanto, en modelos estructurales se permite ajustar las covarianzas entre las variables en vez de ajustar los datos, así que se minimiza la diferencia entre la covarianza observada de la muestra y la covarianza pronosticada por el modelo. 
+
+El ajuste se debe a la siguiente ecuación: $\sum = \sum(\theta)$, donde $\sum$ es la matriz de varianzas y covarianzas poblacional entre las variables observadas, $\theta$ es un vector de parámetros del modelos y $\sum(\theta)$ es la matriz de varianzas y covarianzas derivada como una función de parámetros contenidos en el vector $\theta$.
+
+
+## Software
+
+Para el proceso de recolección de datos fue utilizado MS Excel y el análisis de los mismos se realizó utilizando el software estadístico R [@rbase].
+
+
+
+```{r, include = FALSE}
+library("knitr")
+library("readxl")
+library("dplyr")
+library("pander")
+library("corrplot")
+library("tibble")
+library("FactoMineR")
+library("stringr")
+library("tidyr")
+library("nortest")
+library("ggplot2")
+library("ggrepel")
+library("extrafont")
+library("psych") # para el alpha
+library("magrittr")
+
+```
+
+```{r, include = FALSE}
+opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, results = "hide", fig.show = "hide", include = TRUE, cache = TRUE)
+
+options(knitr.kable.NA = ' - ', stringsAsFactors = FALSE)
+
+settings_list <- list(
+  data_folder = "687_Datos",
+  data_file = "DATA.xlsx",
+  model_path = "687_Modelo",
+  child_files = paste0("child-", 1:4, ".rmd")
+
+)
+
+```
+
+```{r}
+mult <- function(pca, datos, meta, rotulos, varnames_col = rotulos, ind_name, plot_size = 1.1){
+
+  if(nrow(meta) != nrow(pca$var$coord)) meta %<>% filter(meta[[varnames_col]] %in% rownames(pca$var$coord))
+  
+  pca %$% var %$% coord %>% as.data.frame %>% mutate(variable = rownames(.), preg = meta[[rotulos]]) %>% inner_join(meta, by = c(variable = varnames_col)) %>% 
+  ggplot + 
+  geom_hline(aes(yintercept = 0), size=.2) + 
+  geom_vline(aes(xintercept = 0), size=.2) +
+  geom_segment(aes(x = 0, y = 0, xend = Dim.1, yend = Dim.2), colour = "#222222", arrow = arrow(type = "closed", length = unit(x = 0.3, units = "cm"))) +
+  geom_label_repel(alpha = 1, size = 5, aes(x = Dim.1, y = Dim.2, label = preg)) +
+  xlab("Primer factor") + 
+  ylab("Segundo factor") + 
+  xlim(-plot_size, plot_size) +
+  ylim(-plot_size, plot_size) +
+  coord_fixed() + 
+  theme_bw() + 
+  annotate(
+    "path",
+    x= cos(seq(0,2*pi,length.out=100)),
+    y= sin(seq(0,2*pi,length.out=100))
+  ) -> Variables
+  
+  varcaption <- paste0("Figura: círculo de correlaciones de _", ind_name, "_. Fuente: elaboración propia utilizando el software estadístico R [@rbase].")
+
+  pca %$% as.data.frame(eig) %>% mutate(Eje = 1:nrow(.), eigen_cum = cumsum(eigenvalue)) -> eig
+  
+  eig %>% setNames(letters[1:ncol(.)]) %>% ggplot + 
+  geom_line(aes(x = d, y = b), colour = "#0088dd") +
+  geom_point(aes(x = d, y = b), colour = "#0088dd")  + 
+  geom_line(aes(x = d, y = c), colour = "#dd8800") +
+  geom_point(aes(x = d, y = c), colour = "#dd8800")  + 
+  labs(y = "Varianza", x = "Eje")  +
+  scale_x_continuous(breaks = 1:nrow(eig)) +
+  scale_y_continuous(limits = c(0, max(eig$c + 0.1))) +
+  theme_light(base_family = "Times New Roman") -> sedim
+  
+  sedimcaption =  paste0("Figura: gráfico de sedimentación de _", ind_name, "_. En azul el porcentaje de varianza explicado por cada eje, en rojo el porcentaje acumulado. Fuente: elaboración propia utilizando el software estadístico R [@rbase].")
+  
+  list(var_plot = Variables, var_caption = varcaption, sedim_plot = sedim, sedim_caption = sedimcaption)
+  
+}
+
+# i<- 4
+# completo_analisis$nombre_cons_es[[i]] -> ind_name
+# completo_analisis$acp[[i]] -> pca
+# completo_analisis$data[[i]] -> meta
+# completo_analisis$bases_datos[[i]] -> datos
+# 
+# rotulos <- "nombe_item"
+# varnames_col <- "rotulo"
+
+
+```
+
+
+```{r}
+# opts_chunk$set(include = FALSE)
+loadfonts()
+
+settings_list %$% file.path(data_folder, data_file) %>% 
+  read_excel(sheet = "Diccionario") -> dic
+settings_list %$% file.path(data_folder, data_file) %>% 
+  read_excel(sheet = "Hipótesis") -> hyp
+settings_list %$% file.path(data_folder, data_file) %>% 
+  read_excel(sheet = "Base") %>% 
+  setNames(dic[["nombre_item"]]) -> base
+
+Scale_01 <- function(x){(x - min(x))/(max(x) - min(x))}
+
+
+```
+
+```{r}
+
+library("purrr")
+
+dic %>% 
+  # mutate(desc_item = "") %>% 
+  group_by(constructo, nombre_cons_en, nombre_cons_es) %>% 
+  nest() %>% 
+  mutate(
+    bases_datos = map(data, function(x) base[x$nombre_item]),
+    item_names = map(data, extract2, "nombre_item"),
+    cors = Map(setNames, bases_datos, item_names) %>% map(cor), 
+    acp = map(bases_datos, PCA, graph = FALSE),
+    analisis_multi = Map(mult, acp, bases_datos, data, "nombre_item", "nombre_item", nombre_cons_es),
+    alphas = map(bases_datos, as.data.frame) %>% map(alpha),
+    shapiro = lapply(acp, function(x) x %$% ind %$% coord %>% as.data.frame %$% shapiro.test(Dim.1)),
+    lillie = map(acp, function(x) x %$% ind %$% coord %>% as.data.frame %$% lillie.test(Dim.1)),
+    numero_items = lapply(data, nrow) %>% unlist,
+    varianza_eje_1 = lapply(acp, function(x) x%$% as.data.frame(eig) %>% "["(1,3)) %>% unlist,
+    alpha_cron = lapply(alphas, function(x) x[["total"]][["raw_alpha"]]) %>% unlist,
+    alpha_gut = lapply(alphas, function(x) x[["total"]][["G6(smc)"]]) %>% unlist,
+    shapiro_p = map_dbl(shapiro, extract2, "p.value"),
+    lillie_p = map_dbl(lillie, extract2, "p.value")
+  ) -> completo_analisis
+
+
+
+```
+
+
+```{r}
+
+codigo_uni <- "687_Modelo/687_Modelo_plantilla-rmd.txt"
+
+fileconn <- file(codigo_uni)
+readLines(con = fileconn) -> plantilla
+close(fileconn)
+
+
+
+```
+
+
+
+```{r}
+
+multivariado <- function(factor, plantilla_rmd){
+str_replace_all(plantilla_rmd, "factor_nombre", factor) %>% paste(collapse = "\n") 
+}
+
+ 
+     
+```
+
+
+
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+completo_analisis %$% 
+  Map(multivariado, factor = constructo, list(plantilla)) %>% 
+  unlist -> childs
+
+```
+
+
+
+
+```{r}
+
+settings_list %$%
+  file.path(model_path, child_files) %>%
+  map(file) -> file_conns
+
+
+writeLines(childs[1], con = file_conns[[1]])
+writeLines(childs[2], con = file_conns[[2]])
+writeLines(childs[3], con = file_conns[[3]])
+writeLines(childs[4], con = file_conns[[4]])
+
+file_conns %>% map(close)
+
+```
+
+
+
+
+
+
+# Análisis de los constructos
+
+El primer paso en la construcción de un modelo de ecuaciones estructurales es el análisis de cada uno de los constructos.
+
+En este sentido, se presenta apra cada constructo un análisis multivariado compuesto por 3 procedimientos.
+
+Un análisis de correlación mútiple estudia las correlaciones entre los ítems a nivel individual mediante la matriz de correlaciones y a nivel grupal mediante un análisis factorial exploratorio, en este caso de componentes principales. En caso de inconvenientes en torno a las correlaciones es necesario modificar la estructura del constructo retirando ítems y luego realizar un análisis factorial confirmatorio.
+
+Un análisis de consistencia interna de los ítems revela el nivel de consistencia de cada uno de los constructos. Para esto se calculan los estadísticos de alpha de Cronbach y lambda 6 de Guttman.
+
+Un análisis de normalidad permite establecer si el constructo cumple o no el supuesto de normalidad.
+
+Los resultados se encuentran en la tabla
+
+```{r, results = "asis"}
+completo_analisis %>% 
+  ungroup() %>% 
+  select(
+    constructo, 
+    nombre_cons_es, 
+    numero_items, 
+    varianza_eje_1, 
+    alpha_cron, 
+    alpha_gut,
+    shapiro_p,
+    lillie_p
+    ) %>% 
+  setNames(c("Rótulo", "Nombre", "CI", "Var ACP", "Cron", "Gutt", "Shapiro", "Lilliefors")) %>%
+  kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los constructos evaluados. CI: Cantidad de ítems; Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; Shapiro: p-valor de la prueba de normalidad de Shapiro Wilks; Lilliefors: p-valor de la prueba de normalidad de Lilliefors. Fuente: elaboración propia.")
+
+
+```
+
+
+```{r child = settings_list$child_files[1]}
+```
+
+
+```{r child = settings_list$child_files[2]}
+```
+
+
+```{r child = settings_list$child_files[3]}
+```
+
+
+```{r child = settings_list$child_files[4]}
+```
+
+
+# Modelo
+
+En esta sección se presentan los resultados del cálculo del modelo de ecuaciones estructurales propuesto.
+
+En primera instancia se observa los valores estimados vía máxima verosimilitud con p valores e intervalos de confianza obtenidos bajo el supuesto de normalidad. Se realizan tres tipos de estimaciones: la estimación de los pesos correspondientes a las relaciones explícitas del modelo; la estimación de las correlaciones entre los constructos no conectados y la estimación de las varianzas de cada variable (sea observada o latente).
+
+Estos p valores e intervalos de confianza han sido calculados usando el supuesto de normalidad de las variables latentes. Sin embargo, según las pruebas realizadas previamente este supuesto no se cumple. De manera que es necesario recalcular los p valores e intervalos de confianza: para ello se realiza un procedimiento de bootstrapping.
+
+Seguido a esto se realiza la evaluación del modelo, calculando diversos estadísticos que dan cuenta de distintos factores relevantes. Se evalúa consistencia, significancia y ajuste.
+
+Estos procedimientos permiten evaluar las hipótesis planteadas en el dearrollo del estudio y presentar el modelo mediante visualizaciones adecuadas.
+
+
+```{r}
+opts_chunk$set(fig.width = 8.5, fig.height = 10)
+
+bootstrap_pvalue <- function(bootstrapped){
+  min(mean(bootstrapped > 0), mean(bootstrapped < 0))*2
+  }
+
+bootstrap_runs <- 1000
+
+```
+
+
+
+
+```{r}
+dic %$% 
+  split(nombre_item, constructo) -> observables_por_factor
+
+observables_por_factor %>%  
+  lapply(paste, collapse = " + ") %>% mapply(paste, names(.), " =~ ", .) -> formulas_basicas
+
+```
+
+
+
+```{r}
+library("lavaan")
+
+paste0(formulas_basicas, c(" + e_WOM", " + BCI + e_WOM", "", " + BCI")) -> formula_modelo
+
+
+formula_modelo %>% 
+  paste(collapse = "\n") %>% 
+    # sem(data = base, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo
+    sem(data = base) -> modelo
+
+# modelo %>% summary(standardized = TRUE, fit.measures = TRUE)
+
+
+
+```
+
+
+## Estimaciones del modelo
+
+Los parámetros del modelo pueden ser de tres tipos. Los parámetros de interés del modelo son los pesos entre los ítems y los constructos, estos se muestran en primer lugar. Siguen otros parámetros de menos relevancia como las correlaciones entre variables latentes y las varianzas que sin presentadas en segundo y tercer lugar respectivamente.
+
+En la primera tabla se presenta la información de los estimadores correspondientes a las variables latentes.
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>%
+  filter(op == "=~") %>% 
+  mutate(
+    estimate = paste(lhs, rhs, sep = "=~"),
+    value = est
+    ) %>% 
+  select(estimate, value, se, z, pvalue, ci.lower, ci.upper) %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores de coeficientes calculados en el modelo. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; z, puntaje z estandarizado; pvalue, valor p para el estimador; ci.lower, límite inferior de intervalo de confianza; ci.upper, límite superior de intervalo de confianza. Fuente: elaboración propia.")
+
+```
+
+En la segunda tabla se presenta la información de las covarianzas estimadas.
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>% 
+  filter(op == "~~", lhs != rhs) %>% 
+  mutate(
+    estimate = paste(lhs, rhs, sep = "~~"),
+    value = est
+    ) %>% 
+  select(estimate, value, se, z, pvalue, ci.lower, ci.upper) %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores de covarianza calculados en el modelo. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; z, puntaje z estandarizado; pvalue, valor p para el estimador; ci.lower, límite inferior de intervalo de confianza; ci.upper, límite superior de intervalo de confianza. Fuente: elaboración propia.")
+
+```
+
+En la tercera tabla se presenta la información de las varianzas estimadas.
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>% 
+  filter(op == "~~", lhs == rhs) %>% 
+  mutate(
+    estimate = lhs,
+    value = est
+    ) %>% 
+  select(estimate, value, se, z, pvalue, ci.lower, ci.upper) %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores de varianza calculados en el modelo. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; z, puntaje z estandarizado; pvalue, valor p para el estimador; ci.lower, límite inferior de intervalo de confianza; ci.upper, límite superior de intervalo de confianza. Fuente: elaboración propia.")
+
+```
+
+## Bootstraping
+
+Como se vio en las pruebas de normalidad de cada factor, el supuesto de normalidad del modelo en general no se cumple. Este defecto se suple calculando la significancia de los coeficientes mediante un proceso de bootstrapping de `r bootstrap_runs` iteraciones.
+
+
+```{r, results = "asis"}
+bootstrapLavaan(modelo, R = bootstrap_runs) %>% 
+  as_tibble() -> bootstrapped_coefs #235 segundos 
+
+
+bootstrapped_coefs %>% 
+  gather("estimate", "valor") %>% 
+  filter(str_detect(estimate, "=")) %>% 
+  group_by(estimate) %>% 
+  summarise(
+    value = mean(valor),
+    se = sd(valor),
+    min = min(valor),
+    q02.5 = quantile(valor, 0.025),
+    q50 = quantile(valor, .5),
+    q97.5 = quantile(valor, .975),
+    max = max(valor),
+    pvalue = bootstrap_pvalue(valor)
+  ) -> bootstrap_table
+
+bootstrap_table %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores y cuantiles vía bootstrapping. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; min, valor mínimo del estimador; q02.5, cuantil 0.025; q50, mediana; q97.5, cuantil 0.975; max, valor máximo del estimador; pvalue, valor p para el estimador. Fuente: elaboración propia.")
+
+# bootstrapped_coefs %>% gather("coeficiente", "valor") %>% ggplot + aes(x = coeficiente, y = valor) + geom_boxplot() + coord_flip()
+
+
+```
+
+## Ajuste
+
+Los estadísticos presentados dan cuenta de diferentes características del modelo, entre ellas parsimonia, significancia y ajuste.
+
+```{r, results = "asis"}
+modelo %>% 
+  fitmeasures() %>% 
+  round(4) %>% 
+  tibble(estimate = names(.), value = .) %>% 
+  kable(digits = 4, caption = "Tabla: Estadísticos de bondad de ajuste del modelo. Fuente: Elaboracion propia.")
+
+```
+
+## Hipótesis
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  inner_join(hyp, by = c("lhs" = "from", "rhs" = "to")) %>% 
+  transmute(
+    hyp,
+    estimate = paste(lhs, rhs, sep = "=~"),
+    number = round(est, 2)
+    ) %>% 
+  left_join(bootstrap_table) -> hyp_deploy
+
+hyp_deploy %$% extract(hyp, pvalue < 0.05) %>% paste(collapse = ", ") -> good_hyp
+hyp_deploy %$% extract(hyp, pvalue > 0.05) %>% paste(collapse = ", ") -> bad_hyp
+
+
+hyp_deploy %>% 
+  select(hyp, estimate, number, pvalue) %>%   kable(digits = 4, caption = "Tabla: Evaluación de las hipótesis del estudio. Fuente: Elaboracion propia.")
+
+
+```
+
+## Visualización
+
+Se muestran a continuación algunos gráficos relativos al modelo. En ambas visualizaciones se observan los pesos que tienen las distinas variables en relación a los constructos y los constructos entre ellos.
+
+
+```{r, fig.show = "asis", fig.cap = "Figura: Diagrama del modelo. Fuente: elaboración propia utilizando el software estadístico R [@rbase]."}
+library("lavaanPlot")
+
+lavaanPlot(model = modelo, node_options = list(shape = "box"), edge_options = list(color = "grey"), coefs = T)
+
+```
+
+```{r, fig.show = "asis", fig.cap = "Figura: Diagrama del modelo. En verde las relaciones positivas y en rojo las negativas. El ancho de las líneas indica la fuerza de las relaciones. Fuente: elaboración propia utilizando el software estadístico R [@rbase]."}
+library("semPlot")
+
+semPaths(
+  modelo,
+  "stand",
+  whatLabels="est", 
+  intercepts=FALSE,
+  # style="lisrel",
+  nCharNodes=0, 
+  nCharEdges=0,
+  curveAdjacent = TRUE,
+  title=FALSE, 
+  layout="tree2",
+  curvePivot=TRUE
+  )
+
+```
+
+
+```{r, fig.show = "asis", fig.height = 5, fig.width = 8, fig.cap = "Figura: Diagrama del modelo. En verde las relaciones estadísticamente significativas y en rojo aquellas con p-valores menores a 0.05. El ancho de las líneas indica la fuerza de las relaciones. Fuente: elaboración propia utilizando el software estadístico R [@rbase]."}
+library("igraph")
+library("ggraph")
+library("ggrepel")
+
+set.seed(1231)
+
+formula_modelo %>% 
+  paste(collapse = " ") %>% 
+  str_remove_all("[=~+]") %>% 
+  str_split(" ") %>% 
+  unlist %>% 
+  extract(str_count(.) > 0) %>% 
+  unique %>% 
+  enframe(name = "id", value = "name") %>%
+  extract(c("name", "id")) %>% 
+  mutate(
+    is_direct = 1 - as.numeric(name %in% dic[["constructo"]]),
+    label_size = 3.5 - is_direct
+    ) %>% 
+  arrange(is_direct) -> gg_nodes
+
+
+modelo %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  transmute(
+    lhs, 
+    rhs,
+    estimate = paste(lhs, rhs, sep = "=~"),
+    number = round(est, 2),
+    line_width = abs(est)
+    ) %>% 
+  left_join(bootstrap_table) %>% 
+  mutate(
+    pvalue = ifelse(is.na(pvalue), 0, pvalue),
+    sig = ifelse(pvalue < 0.05, "Sí", "No")
+    ) %>% 
+  select(lhs, rhs, number, line_width, sig) %>% 
+  setNames(c("from", "to", "Est", "line_width", "significance")) -> gg_ties
+
+
+
+graph_from_data_frame(d = gg_ties, vertices = gg_nodes, directed = TRUE) -> final_tree
+
+final_tree %>% ggraph(layout = "gem") + 
+  geom_node_circle(
+    aes(alpha = is_direct, r = 35, colour = is_direct),
+    fill = "#ffffff",
+    show.legend = FALSE
+    ) + 
+  geom_edge_diagonal(
+    aes(label = Est, edge_width = line_width, edge_colour = significance), 
+    # colour = "#bbbbbb",
+    arrow = arrow(45, unit(.2, "cm"), type = "closed"),
+    start_cap = circle(10, 'mm'),
+    end_cap = circle(10, 'mm'),
+    label_size = 2.5,
+    show.legend = FALSE
+    ) + 
+  geom_node_label(
+    aes(label = name, alpha = 1 - is_direct),
+    fill = "#dddddd", 
+    colour = NA,
+    show.legend = FALSE,
+    label.padding = unit(0.75, "lines")
+    ) +
+  geom_node_text(
+    aes(label = name),
+    size = gg_nodes$label_size
+    ) +
+  scale_alpha(range = 0:1) +
+  scale_edge_width_continuous(range = c(0.5, 1.5)) +
+  scale_color_continuous(low = "#ffffff", high = "#000000") +
+  # geom_node_circle(aes(r = 1, fill = is_direct)) +
+  # coord_flip() +
+  theme_void()
+
+
+
+
+```
+
+## Interpretación y análisis
+
+En el proceso de modelamiento se pueden observar la construcción de las variables latentes `r dic$constructo %>% unique %>% paste(collapse = ", ")` y las relaciones existentes entre ellas. Al respecto se pueden realizar las siguientes observaciones:
+
+En torno a la construcción de las variables latentes se observan altos niveles de consistencia interna en todas. Los ítems son adecuados para la medición de los constructos y en cada caso, después de el análisis pertinente, se concluye que no es necesario retirar ítems ni modificar la estructura propuesta.
+
+Sobre la distribución de las variables latentes es necesario reiterar la no normalidad. La aplicación de las pruebas de hipótesis de normalidad generaron en todos los casos resultados distribucionalmente alejados de la distribución gaussiana. En este sentido, no es posible hacer uso de los intervalos de confianza ni de los p valores calcualdos por defecto en el modelo.
+
+Respecto a las hipótesis planteadas los resultados indican que las hipótesis `r good_hyp` tuvieron resultados estadísticamente significativos a su favor; mientras, las hipótesis `r bad_hyp` no presentaron resultados estadísticamente significativos.
+
+
+```{r}
+modelo %>% summary(standardized = FALSE, fit.measures = TRUE) -> salidas_modelo
+resid(modelo, type = "normalized")
+resid(modelo, type = "standardized")
+lavResiduals(modelo, type = "cor")
+modindices(modelo, sort. = TRUE, minimum.value = 2.58)
+fitted(modelo)
+# standardizedSolution(modelo)
+lavCor(modelo)
+
+
+
+```
+
+
+
+# Referencias
+
+
+
+
+

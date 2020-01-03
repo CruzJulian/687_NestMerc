@@ -1,0 +1,149 @@
+```{r}
+completo_analisis %$% 
+  extract(nombre_cons_es, constructo == "e_WOM") -> nombre_del_constructo
+
+```
+
+
+### `r nombre_del_constructo`
+
+
+```{r}
+caption_tabla_1 <- paste0("Tabla: Alpha de Cronbach y Lambda 6 de Guttman para _", nombre_del_constructo,"_. Fuente: elaboración propia.")
+
+caption_tabla_2 <- paste0("Alpha de Cronbach y Lambda 6 de Guttman retirando cada ítem para _", nombre_del_constructo,"_. Fuente: elaboración propia.")
+
+caption_shapiro <- paste0("Tabla: Prueba de normalidad de Shapiro-Wilks para _", nombre_del_constructo,"_. Fuente: elaboración propia.")
+
+caption_lillie <- paste0("Tabla: Prueba de normalidad de Lilliefors para _", nombre_del_constructo,"_. Fuente: elaboración propia.")
+
+caption_corrs <- paste0("Figura: Matriz de correlaciones de _", nombre_del_constructo, "_. Fuente: elaboración propia utilizando el software estadístico R [@rbase].") 
+
+completo_analisis %>% 
+  filter(constructo == "e_WOM") %$%
+  data %>% 
+  extract2(1) %>%
+  mutate(descrip = str_c(nombre_item, desc_item, sep = ": ")) %$% 
+  paste(descrip, collapse = ". ") -> fig_caption
+
+
+```
+
+
+
+A continuación se muestra el análisis realizado a los ítems asociadas al constructo de `r nombre_del_constructo`^[`r fig_caption`].
+
+
+#### Análisis de correlación múltiple
+
+La matriz de correlaciones entre los ítems constituye una primera aproximación. En este gráfico es importante encontrar correlaciones fuertes entre los ítems, al menos mayores a 0.5.
+
+```{r, fig.show = "asis", fig.height= 4, fig.width = 4, fig.cap = caption_corrs}
+
+
+col <- colorRampPalette(c("#ccc000", "#ddd999", "#eeeeee", "#999ddd", "#000ccc"))
+
+completo_analisis %$% 
+  extract2(cors, which(constructo == "e_WOM")) %>% 
+  corrplot.mixed(
+    lower = "number", 
+    upper = "color", 
+    family = "Times New Roman", 
+    lower.col = "#aaaaaa",  
+    number.cex = 1, 
+    tl.cex = 1
+  )
+  
+  
+```
+
+En el análisis de componentes principales cada eje retiene un porcentaje de la varianza. Este es mostrado de manera individual y acumulada en el gráfico de sedimentación. 
+
+
+```{r}
+completo_analisis %$% 
+  extract2(analisis_multi, which(constructo == "e_WOM")) %$% sedim_caption -> sedim_cap
+
+```
+
+```{r, fig.show = "asis", fig.cap = sedim_cap, fig.height= 2.5, fig.width = 6}
+completo_analisis %$% 
+  extract2(analisis_multi, which(constructo == "e_WOM")) %$% sedim_plot 
+
+```
+El círculo de correlaciones permite visualizar los ítems como flechas. Cuando estas flechas apuntan todas en la misma dirección se tiene un nivel de consistencia interna alto.
+
+```{r}
+completo_analisis %$% 
+  extract2(analisis_multi, which(constructo == "e_WOM")) %$% var_caption -> var_caption
+
+```
+
+```{r, fig.show = "asis", fig.cap = var_caption, fig.height= 4, fig.width = 6}
+completo_analisis %$% 
+  extract2(analisis_multi, which(constructo == "e_WOM")) %$% var_plot 
+
+```
+
+
+#### Análisis de consistencia interna
+
+Para evaluar la consistencia interna es posible usar varios estadísticos. Entre ellos el alpha de Cronbach y el lambda 6 de Guttman; que se muestran a continuación.
+
+
+```{r, results = "asis"}
+
+completo_analisis %$% 
+  extract2(alphas, which(constructo == "e_WOM")) -> reability
+
+
+completo_analisis %$% 
+  extract2(shapiro, which(constructo == "e_WOM")) -> shapiro_wilks
+
+completo_analisis %$% 
+  extract2(lillie, which(constructo == "e_WOM")) -> lilliefors
+
+
+data.frame(
+  x1 = min(reability[["item.stats"]][["n"]]),
+  x2 = reability$nvar,
+  x3 = reability[["total"]][["raw_alpha"]],
+  x4 = reability[["total"]][["G6(smc)"]]
+  ) %>% 
+  setNames(c("Individuos", "ítems", "Alpha de Cronbach", "Guttman's Lambda 6")) %>% 
+  kable(digits = 2, caption = caption_tabla_1)
+
+```
+
+Para evaluar la pertinencia de los ítems en torno al factor se calcula la consistencia interna retirando los ítems uno por uno. Este análisis del ítem permite medir la consistencia en distintos escenarios y así detectar cuáles ítems resultan inapropiados o afectan la consistencia interna de manera negativa. La siguiente tabla muestra el análisis realizado.
+
+```{r, results = "asis"}
+
+data.frame(
+  x0 = rownames(reability[["alpha.drop"]]),
+  x1 = reability[["item.stats"]][["n"]],
+  x3 = reability[["alpha.drop"]][["raw_alpha"]],
+  x4 = reability[["alpha.drop"]][["G6(smc)"]]
+  ) %>% 
+  setNames(c("ítems","Individuos", "Alpha de Cronbach", "Guttman's Lambda 6")) %>% 
+  kable(digits = 2, caption = caption_tabla_2)
+
+```
+
+#### Normalidad del factor
+
+Para la Construcción de un modelo de ecuaciones estructurales, es relevante comprobar supuestos estadísticos usuales. Para ello se aplican dos pruebas de normalidad conocidas, Shapiro-Wilks y Lilliefors siendo la primera una de las más potentes reportadas. Para tener normalidad es necesario que los p valores reportados por las pruebas sean mayores a la significancia de $\alpha = 0.05$. Si el p valor resulta menor a 0.05, el factor calculado en el análisis de componentes principales previo 
+
+
+```{r, results = "asis"}
+pander(shapiro_wilks, caption = caption_shapiro)
+
+```
+
+
+```{r, results = "asis"}
+pander(lilliefors, caption = caption_lillie)
+
+```
+
+
