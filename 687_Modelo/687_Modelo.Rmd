@@ -370,11 +370,16 @@ observables_por_factor %>%
 library("lavaan")
 library("semTools")
 
-paste0(formulas_basicas, c(" + e_WOM", " + BCI + e_WOM", "", " + BCI")) -> formula_modelo
 
 
-formula_modelo %>% 
-  paste(collapse = "\n") %>% 
+c(
+    formulas_basicas,
+    c("BCI ~ e_WOM", " BI ~ BCI + e_WOM", "SI ~ BCI")
+) -> formula_modelo
+
+
+formula_modelo %>%
+  paste(collapse = "\n") %>%
     # sem(data = base, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo
     sem(data = base) -> modelo
 
@@ -394,7 +399,7 @@ En la primera tabla se presenta la información de los estimadores correspondien
 ```{r, results = "asis"}
 modelo %>% 
   parameterestimates %>%
-  filter(op == "=~") %>% 
+  filter(op %in% c("=~", "~")) %>% 
   mutate(
     estimate = paste(lhs, rhs, sep = "=~"),
     value = est
@@ -456,7 +461,10 @@ readRDS(settings_list[["bootstrapping_rds_file"]]) -> bootstrapped_coefs
 
 bootstrapped_coefs %>% 
   gather("estimate", "valor") %>% 
-  filter(str_detect(estimate, "=")) %>% 
+  filter(!str_detect(estimate, "~~")) %>% 
+  mutate(
+    estimate = str_replace(estimate, "=", "") %>% str_replace("~", "=~")
+  ) %>% 
   group_by(estimate) %>% 
   summarise(
     value = mean(valor),
@@ -494,8 +502,8 @@ modelo %>%
 
 ```{r, results = "asis"}
 modelo %>% 
-  parameterestimates %>% 
-  filter(op == "=~") %>% 
+  parameterestimates %>%
+  filter(op %in% c("=~", "~")) %>% 
   inner_join(hyp, by = c("lhs" = "from", "rhs" = "to")) %>% 
   transmute(
     hyp,
@@ -531,16 +539,18 @@ library("semPlot")
 
 semPaths(
   modelo,
-  "eq",
+  "paths",
   whatLabels="est", 
   intercepts=FALSE,
+  residuals = FALSE,
   style="lisrel",
   nCharNodes=0, 
   nCharEdges=0,
   curveAdjacent = TRUE,
   title=FALSE, 
   layout="spring",
-  curvePivot=FALSE
+  curvePivot=TRUE,
+  covAtResiduals = FALSE
   )
 
 
@@ -571,8 +581,8 @@ formula_modelo %>%
 
 
 modelo %>% 
-  parameterestimates %>% 
-  filter(op == "=~") %>% 
+  parameterestimates %>%
+  filter(op %in% c("=~", "~")) %>% 
   transmute(
     lhs, 
     rhs,
@@ -606,7 +616,7 @@ final_tree %>% ggraph(layout = "gem") +
     arrow = arrow(45, unit(.2, "cm"), type = "closed"),
     start_cap = circle(10, 'mm'),
     end_cap = circle(10, 'mm'),
-    label_size = 2.5,
+    label_size = 3,
     show.legend = FALSE
     ) + 
   geom_node_circle(
@@ -704,6 +714,19 @@ modindices(modelo, sort. = TRUE, minimum.value = 2.58)
 fitted(modelo)
 lavCor(modelo)
 reliability(modelo)
+
+
+
+c(
+    formulas_basicas,
+  "BCI ~~ BI", "BCI ~~ SI", "e_WOM ~~ BCI", "e_WOM ~~ BI", "e_WOM ~~ SI"
+  ) -> formula_modelo
+
+formula_modelo %>% 
+  paste(collapse = "\n") %>% 
+    cfa(data = base) -> cfa_model
+
+cfa_model %>% summary(standardized = TRUE, fit.measures = TRUE)
 
 
 
