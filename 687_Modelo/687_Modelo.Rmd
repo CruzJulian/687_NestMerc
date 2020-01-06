@@ -697,10 +697,7 @@ Sobre la distribución de las variables latentes es necesario reiterar la no nor
 
 El procedimiento de bootstrapping de `r bootstrap_runs` iteraciones permite establecer la significancia de los coeficientes del modelo. De esta forma, los valores de los coeficientes son los calculados en el modelo y los valores correspondientes a intervalos de confianza y p valores son los calculados en el bootstrapping.
 
-Respecto a las hipótesis planteadas los resultados indican que las hipótesis `r good_hyp` tuvieron resultados estadísticamente significativos a su favor; mientras, las hipótesis `r bad_hyp` no presentaron resultados estadísticamente significativos.
-
-
-
+Respecto a las hipótesis planteadas los resultados indican que las hipótesis `r good_hyp` tuvieron resultados estadísticamente significativos a su favor.
 
 
 
