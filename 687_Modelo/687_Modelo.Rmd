@@ -332,7 +332,9 @@ Las pruebas de Shapiro - Wilks y lilliefors tienen resultados muy similares a tr
 
 En esta sección se presentan los resultados del cálculo del modelo de ecuaciones estructurales propuesto.
 
-En primera instancia se observa los valores estimados vía máxima verosimilitud con p valores e intervalos de confianza obtenidos bajo el supuesto de normalidad. Se realizan tres tipos de estimaciones: la estimación de los pesos correspondientes a las relaciones explícitas del modelo; la estimación de las correlaciones entre los constructos no conectados y la estimación de las varianzas de cada variable (sea observada o latente).
+En primera instancia se corre el análisis factorial confirmatorio, que recoge la información respecto a las variables latentes y corrobora los resultados presentados en la sección anterior. 
+
+Luego se  los valores estimados vía máxima verosimilitud con p valores e intervalos de confianza obtenidos bajo el supuesto de normalidad. Se realizan tres tipos de estimaciones: la estimación de los pesos correspondientes a las relaciones explícitas del modelo; la estimación de las correlaciones entre los constructos no conectados y la estimación de las varianzas de cada variable (sea observada o latente).
 
 Estos p valores e intervalos de confianza han sido calculados usando el supuesto de normalidad de las variables latentes. Sin embargo, según las pruebas realizadas previamente este supuesto no se cumple. De manera que es necesario recalcular los p valores e intervalos de confianza: para ello se realiza un procedimiento de bootstrapping.
 
@@ -340,6 +342,11 @@ Seguido a esto se realiza la evaluación del modelo, calculando diversos estadí
 
 Estos procedimientos permiten evaluar las hipótesis planteadas en el dearrollo del estudio y presentar el modelo mediante visualizaciones adecuadas.
 
+
+## Análisis factorial confirmatorio
+
+
+El análisis factoril confirmatorio muestra los pesos de cada ítem al interior de cada constructo, además de las varianzas y covarianzas estimadas,
 
 ```{r}
 opts_chunk$set(fig.width = 8.5, fig.height = 10)
@@ -370,22 +377,29 @@ observables_por_factor %>%
 library("lavaan")
 library("semTools")
 
-
-
 c(
-    formulas_basicas,
-    c("BCI ~ e_WOM", " BI ~ BCI + e_WOM", "SI ~ BCI")
-) -> formula_modelo
+  formulas_basicas,
+  "BCI ~~ BI", "BCI ~~ SI", "e_WOM ~~ BCI", "e_WOM ~~ BI", "e_WOM ~~ SI"
+  ) -> formula_modelo
+
+formula_modelo %>% 
+  paste(collapse = "\n") %>% 
+    cfa(data = base) -> cfa_model
+
+# cfa_model %>% summary(standardized = TRUE, fit.measures = TRUE)
+
+```
 
 
-formula_modelo %>%
-  paste(collapse = "\n") %>%
-    # sem(data = base, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo
-    sem(data = base) -> modelo
-
-# modelo %>% summary(standardized = TRUE, fit.measures = TRUE)
-
-
+```{r, results = "asis"}
+cfa_model %>% 
+  parameterestimates %>%
+  mutate(
+    estimate = paste(lhs, op, rhs, sep = ""),
+    value = est
+    ) %>% 
+  select(estimate, value, se, z, pvalue, ci.lower, ci.upper) %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores de coeficientes calculados en el análisis factorial confirmatorio. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; z, puntaje z estandarizado; pvalue, valor p para el estimador; ci.lower, límite inferior de intervalo de confianza; ci.upper, límite superior de intervalo de confianza. Fuente: elaboración propia.")
 
 ```
 
@@ -393,6 +407,29 @@ formula_modelo %>%
 ## Estimaciones del modelo
 
 Los parámetros del modelo pueden ser de tres tipos. Los parámetros de interés del modelo son los pesos entre los ítems y los constructos, estos se muestran en primer lugar. Siguen otros parámetros de menos relevancia como las correlaciones entre variables latentes y las varianzas que sin presentadas en segundo y tercer lugar respectivamente.
+
+
+```{r}
+# c(
+#     formulas_basicas,
+#     # c("BCI ~ e_WOM", " BI ~ BCI + e_WOM", "SI ~ BCI")
+#     c("BCI ~ SI", " e_WOM ~ BCI + BI")
+# ) -> formula_modelo
+
+paste0(formulas_basicas, c(" + e_WOM", " + BCI + e_WOM", "", " + BCI")) -> formula_modelo
+
+formula_modelo %>%
+  paste(collapse = "\n") %>%
+    # sem(data = base, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo
+    sem(data = base, auto.fix.single = FALSE, auto.fix.first = FALSE) -> modelo
+
+# modelo %>% summary(standardized = TRUE, fit.measures = TRUE)
+
+# det(cov(base[7:21]))
+
+```
+
+
 
 En la primera tabla se presenta la información de los estimadores correspondientes a las variables latentes.
 
@@ -703,6 +740,7 @@ Respecto a las hipótesis planteadas los resultados indican que las hipótesis `
 
 
 ```{r}
+cfa_model %>% summary(standardized = TRUE, fit.measures = TRUE)
 modelo %>% summary(standardized = TRUE, fit.measures = TRUE)
 resid(modelo, type = "normalized")
 resid(modelo, type = "standardized")
@@ -714,16 +752,6 @@ reliability(modelo)
 
 
 
-c(
-    formulas_basicas,
-  "BCI ~~ BI", "BCI ~~ SI", "e_WOM ~~ BCI", "e_WOM ~~ BI", "e_WOM ~~ SI"
-  ) -> formula_modelo
-
-formula_modelo %>% 
-  paste(collapse = "\n") %>% 
-    cfa(data = base) -> cfa_model
-
-cfa_model %>% summary(standardized = TRUE, fit.measures = TRUE)
 
 
 
