@@ -178,6 +178,100 @@ base %>%
 
 ```
 
+```{r}
+library("FactoMineR")
+
+# dic %$% "["(nombre_item,constructo == "e_WOM")
+
+
+base %>% 
+  select(e_WOM_1, e_WOM_2, e_WOM_3, e_WOM_4) %>% 
+  PCA(graph = FALSE) %$%
+  ind %$%
+  coord %>% 
+  as.data.frame() %$%
+  Dim.1 -> e_WOM
+
+base %>% 
+  select(BCI_1, BCI_2, BCI_3, BCI_4, BCI_5, BCI_6) %>% 
+  mutate(
+    e_WOM = e_WOM
+    ) %>% 
+  PCA(graph = FALSE) %$%
+  ind %$%
+  coord %>% 
+  as.data.frame() %$%
+  Dim.1 -> BCI
+
+base %>% 
+  select(BI_1, BI_2, BI_3, BI_4, BI_5) %>% 
+  mutate(
+    e_WOM = e_WOM,
+    BCI = BCI
+    ) %>% 
+  PCA(graph = FALSE) %$%
+  ind %$%
+  coord %>% 
+  as.data.frame() %$%
+  Dim.1 -> BI
+
+base %>% 
+  select(CSI_1, CSI_2, ASI_1, ASI_2, ESI_1, ESI_2) %>% 
+  mutate(
+    BCI = BCI
+    ) %>% 
+  PCA(graph = FALSE) %$%
+  ind %$%
+  coord %>% 
+  as.data.frame() %$%
+  Dim.1 -> SI
+
+
+
+
+base %>% 
+  mutate(
+    SI = SI,
+    BI = BI, 
+    BCI = BCI,
+    e_WOM = e_WOM
+    ) -> base_experimento
+
+
+c(
+  "SI ~ CSI_1",
+  "SI ~ CSI_2",
+  "SI ~ ESI_1",
+  "SI ~ ESI_2",
+  "SI ~ ASI_1",
+  "SI ~ ASI_2",
+  "BI ~ BI_1",
+  "BI ~ BI_2",
+  "BI ~ BI_3",
+  "BI ~ BI_4",
+  "BI ~ BI_5",
+  "BCI ~ BCI_1",
+  "BCI ~ BCI_2",
+  "BCI ~ BCI_3",
+  "BCI ~ BCI_4",
+  "BCI ~ BCI_5",
+  "BCI ~ BCI_6",
+  "e_WOM ~ e_WOM_1",
+  "e_WOM ~ e_WOM_2",
+  "e_WOM ~ e_WOM_3",
+  "e_WOM ~ e_WOM_4",
+  "BCI ~ SI + BI", 
+  " e_WOM ~ BCI + BI"
+) -> formulas_expr
+
+formulas_expr %>% 
+  lapply(formula) %>% 
+  lapply(lm, data = base_experimento) -> modelos_experimento
+
+modelos_experimento %>% 
+  lapply(summary)
+
+```
 
 
 ```{r}
@@ -316,37 +410,11 @@ completo_analisis %>%
 ```{r child = settings_list$child_files[4]}
 ```
 
-## Interpretación y análisis
-
-Los resultados presentados corresponden a los procedimientos de análisis de correlación mútiple, análisis de consistencia interna  y análisis de normalidad realizados a cada una de las variables latentes. Es necesario entonces efectuar un proceso de interpretación y análisis que los acompañe.
-
-En general, los resultados de las cuatro variables latentes son muy similares. Es posible observar un alto grado de correlación entre los ítems de cada constructo, una consistencia interna alta y un indicador de no normalidad.
-
-La selección de los ítems resulta correcta en términos de asociación. Siendo ítems que se relacionan entre sí, mostrando altos grados de correlación en todas las variables latente. En el caso de SI (Identidad Social), los ítems se dividen en tres grupos de acuerdo a su correlación: ítems cognitivos, afectivos y evaluativos.
-
-Los valores altos de consistencia interna muestran una definición adecuada de las variables latentes. Esto significa que ambos procedimientos (alpha de Cronbach y lambda 6 de Guttman) reportan que los ítems en efecto son expresiones medibles del constructo; permitiendo así la medición indirecta.  
-
-Las pruebas de Shapiro - Wilks y lilliefors tienen resultados muy similares a través de todas las variables latentes. En general es posible enunciar que todas son no normales. En el caso de SI (Identidad Social), es posible observar un p valor no significativo, de 0.07, para Shapiro - Wilks, que contrasta con el resultado significativo de lilliefors; en este caso se opta por mantener el valor más bajo evitando el error de tipo I.
-
-# Modelo
-
-En esta sección se presentan los resultados del cálculo del modelo de ecuaciones estructurales propuesto.
-
-En primera instancia se corre el análisis factorial confirmatorio, que recoge la información respecto a las variables latentes y corrobora los resultados presentados en la sección anterior. 
-
-Luego se  los valores estimados vía máxima verosimilitud con p valores e intervalos de confianza obtenidos bajo el supuesto de normalidad. Se realizan tres tipos de estimaciones: la estimación de los pesos correspondientes a las relaciones explícitas del modelo; la estimación de las correlaciones entre los constructos no conectados y la estimación de las varianzas de cada variable (sea observada o latente).
-
-Estos p valores e intervalos de confianza han sido calculados usando el supuesto de normalidad de las variables latentes. Sin embargo, según las pruebas realizadas previamente este supuesto no se cumple. De manera que es necesario recalcular los p valores e intervalos de confianza: para ello se realiza un procedimiento de bootstrapping.
-
-Seguido a esto se realiza la evaluación del modelo, calculando diversos estadísticos que dan cuenta de distintos factores relevantes. Se evalúa consistencia, significancia y ajuste.
-
-Estos procedimientos permiten evaluar las hipótesis planteadas en el dearrollo del estudio y presentar el modelo mediante visualizaciones adecuadas.
-
 
 ## Análisis factorial confirmatorio
 
 
-El análisis factoril confirmatorio muestra los pesos de cada ítem al interior de cada constructo, además de las varianzas y covarianzas estimadas,
+El análisis factorial confirmatorio muestra los pesos de cada ítem al interior de cada constructo, además de las varianzas y covarianzas estimadas,
 
 ```{r}
 opts_chunk$set(fig.width = 8.5, fig.height = 10)
@@ -403,6 +471,33 @@ cfa_model %>%
 
 ```
 
+## Interpretación y análisis
+
+Los resultados presentados corresponden a los procedimientos de análisis de correlación mútiple, análisis de consistencia interna  y análisis de normalidad realizados a cada una de las variables latentes. Es necesario entonces efectuar un proceso de interpretación y análisis que los acompañe.
+
+En general, los resultados de las cuatro variables latentes son muy similares. Es posible observar un alto grado de correlación entre los ítems de cada constructo, una consistencia interna alta y un indicador de no normalidad.
+
+La selección de los ítems resulta correcta en términos de asociación. Siendo ítems que se relacionan entre sí, mostrando altos grados de correlación en todas las variables latente. En el caso de SI (Identidad Social), los ítems se dividen en tres grupos de acuerdo a su correlación: ítems cognitivos, afectivos y evaluativos.
+
+Los valores altos de consistencia interna muestran una definición adecuada de las variables latentes. Esto significa que ambos procedimientos (alpha de Cronbach y lambda 6 de Guttman) reportan que los ítems en efecto son expresiones medibles del constructo; permitiendo así la medición indirecta.  
+
+Las pruebas de Shapiro - Wilks y lilliefors tienen resultados muy similares a través de todas las variables latentes. En general es posible enunciar que todas son no normales. En el caso de SI (Identidad Social), es posible observar un p valor no significativo, de 0.07, para Shapiro - Wilks, que contrasta con el resultado significativo de lilliefors; en este caso se opta por mantener el valor más bajo evitando el error de tipo I.
+
+
+
+# Primer modelo
+
+En esta sección se presentan los resultados del cálculo del modelo de ecuaciones estructurales propuesto.
+
+En primera instancia se corre el análisis factorial confirmatorio, que recoge la información respecto a las variables latentes y corrobora los resultados presentados en la sección anterior. 
+
+Luego se  los valores estimados vía máxima verosimilitud con p valores e intervalos de confianza obtenidos bajo el supuesto de normalidad. Se realizan tres tipos de estimaciones: la estimación de los pesos correspondientes a las relaciones explícitas del modelo; la estimación de las correlaciones entre los constructos no conectados y la estimación de las varianzas de cada variable (sea observada o latente).
+
+Estos p valores e intervalos de confianza han sido calculados usando el supuesto de normalidad de las variables latentes. Sin embargo, según las pruebas realizadas previamente este supuesto no se cumple. De manera que es necesario recalcular los p valores e intervalos de confianza: para ello se realiza un procedimiento de bootstrapping.
+
+Seguido a esto se realiza la evaluación del modelo, calculando diversos estadísticos que dan cuenta de distintos factores relevantes. Se evalúa consistencia, significancia y ajuste.
+
+Estos procedimientos permiten evaluar las hipótesis planteadas en el dearrollo del estudio y presentar el modelo mediante visualizaciones adecuadas.
 
 ## Estimaciones del modelo
 
@@ -757,6 +852,394 @@ reliability(modelo)
 
 ```
 
+
+
+
+
+# Segundo modelo
+
+En esta sección se presentan los resultados del cálculo del modelo de ecuaciones estructurales propuesto.
+
+En primera instancia se corre el análisis factorial confirmatorio, que recoge la información respecto a las variables latentes y corrobora los resultados presentados en la sección anterior. 
+
+Luego se  los valores estimados vía máxima verosimilitud con p valores e intervalos de confianza obtenidos bajo el supuesto de normalidad. Se realizan tres tipos de estimaciones: la estimación de los pesos correspondientes a las relaciones explícitas del modelo; la estimación de las correlaciones entre los constructos no conectados y la estimación de las varianzas de cada variable (sea observada o latente).
+
+Estos p valores e intervalos de confianza han sido calculados usando el supuesto de normalidad de las variables latentes. Sin embargo, según las pruebas realizadas previamente este supuesto no se cumple. De manera que es necesario recalcular los p valores e intervalos de confianza: para ello se realiza un procedimiento de bootstrapping.
+
+Seguido a esto se realiza la evaluación del modelo, calculando diversos estadísticos que dan cuenta de distintos factores relevantes. Se evalúa consistencia, significancia y ajuste.
+
+Estos procedimientos permiten evaluar las hipótesis planteadas en el dearrollo del estudio y presentar el modelo mediante visualizaciones adecuadas.
+
+## Estimaciones del modelo
+
+Los parámetros del modelo pueden ser de tres tipos. Los parámetros de interés del modelo son los pesos entre los ítems y los constructos, estos se muestran en primer lugar. Siguen otros parámetros de menos relevancia como las correlaciones entre variables latentes y las varianzas que sin presentadas en segundo y tercer lugar respectivamente.
+
+
+```{r}
+c(
+    formulas_basicas[-1],
+    # c("BCI ~ e_WOM", " BI ~ BCI + e_WOM", "SI ~ BCI")
+    c("SI ~ BI", " e_WOM ~ SI + BI")
+) -> formula_modelo
+
+formula_modelo %>%
+  paste(collapse = "\n") %>%
+    # sem(data = base, auto.fix.single = FALSE, auto.fix.first = FALSE, std.lv=TRUE) -> modelo
+    sem(data = base, auto.fix.single = FALSE, auto.fix.first = FALSE) -> modelo
+
+# modelo %>% summary(standardized = TRUE, fit.measures = TRUE)
+
+# det(cov(base[7:21]))
+
+```
+
+
+
+En la primera tabla se presenta la información de los estimadores correspondientes a las variables latentes.
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>%
+  filter(op %in% c("=~", "~")) %>% 
+  mutate(
+    estimate = paste(lhs, rhs, sep = "=~"),
+    value = est
+    ) %>% 
+  select(estimate, value, se, z, pvalue, ci.lower, ci.upper) %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores de coeficientes calculados en el modelo. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; z, puntaje z estandarizado; pvalue, valor p para el estimador; ci.lower, límite inferior de intervalo de confianza; ci.upper, límite superior de intervalo de confianza. Fuente: elaboración propia.")
+
+```
+
+En la segunda tabla se presenta la información de las covarianzas estimadas.
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>% 
+  filter(op == "~~", lhs != rhs) %>% 
+  mutate(
+    estimate = paste(lhs, rhs, sep = "~~"),
+    value = est
+    ) %>% 
+  select(estimate, value, se, z, pvalue, ci.lower, ci.upper) %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores de covarianza calculados en el modelo. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; z, puntaje z estandarizado; pvalue, valor p para el estimador; ci.lower, límite inferior de intervalo de confianza; ci.upper, límite superior de intervalo de confianza. Fuente: elaboración propia.")
+
+```
+
+En la tercera tabla se presenta la información de las varianzas estimadas.
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>% 
+  filter(op == "~~", lhs == rhs) %>% 
+  mutate(
+    estimate = lhs,
+    value = est
+    ) %>% 
+  select(estimate, value, se, z, pvalue, ci.lower, ci.upper) %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores de varianza calculados en el modelo. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; z, puntaje z estandarizado; pvalue, valor p para el estimador; ci.lower, límite inferior de intervalo de confianza; ci.upper, límite superior de intervalo de confianza. Fuente: elaboración propia.")
+
+```
+
+## Bootstraping
+
+Como se vio en las pruebas de normalidad de cada factor, el supuesto de normalidad del modelo en general no se cumple. Este defecto se suple calculando la significancia de los coeficientes mediante un proceso de bootstrapping de `r bootstrap_runs` iteraciones.
+
+
+```{r, eval = FALSE}
+set.seed(0)
+
+bootstrapLavaan(modelo, R = bootstrap_runs) %>% 
+  as_tibble() -> bootstrapped_coefs #235 segundos 
+
+saveRDS(bootstrapped_coefs, settings_list[["bootstrapping_rds_file"]])
+
+```
+
+
+
+```{r, results = "asis"}
+readRDS(settings_list[["bootstrapping_rds_file"]]) -> bootstrapped_coefs
+
+bootstrapped_coefs %>% 
+  gather("estimate", "valor") %>% 
+  filter(!str_detect(estimate, "~~")) %>% 
+  mutate(
+    estimate = str_replace(estimate, "=", "") %>% str_replace("~", "=~")
+  ) %>% 
+  group_by(estimate) %>% 
+  summarise(
+    value = mean(valor),
+    se = sd(valor),
+    min = min(valor),
+    q02.5 = quantile(valor, 0.025),
+    q50 = quantile(valor, .5),
+    q97.5 = quantile(valor, .975),
+    max = max(valor),
+    pvalue = bootstrap_pvalue(valor)
+  ) -> bootstrap_table
+
+bootstrap_table %>% 
+  kable(digits = 2, caption = "Tabla: Estimadores y cuantiles vía bootstrapping. Sus columnas son: estimate, parámetro estimado; value, valor calculado; se, error estándar del estimador; min, valor mínimo del estimador; q02.5, cuantil 0.025; q50, mediana; q97.5, cuantil 0.975; max, valor máximo del estimador; pvalue, valor p para el estimador. Fuente: elaboración propia.")
+
+# bootstrapped_coefs %>% gather("coeficiente", "valor") %>% ggplot + aes(x = coeficiente, y = valor) + geom_boxplot() + coord_flip()
+
+
+```
+
+## Ajuste
+
+Los estadísticos presentados dan cuenta de diferentes características del modelo, entre ellas parsimonia, significancia y ajuste.
+
+```{r, results = "asis"}
+modelo %>% 
+  fitmeasures() %>% 
+  round(4) %>% 
+  tibble(estimate = names(.), value = .) %>% 
+  kable(digits = 4, caption = "Tabla: Estadísticos de bondad de ajuste del modelo. Fuente: Elaboracion propia.")
+
+```
+
+## Hipótesis
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>%
+  filter(op %in% c("=~", "~")) %>% 
+  inner_join(hyp, by = c("lhs" = "from", "rhs" = "to")) %>% 
+  transmute(
+    hyp,
+    estimate = paste(lhs, rhs, sep = "=~"),
+    number = round(est, 2)
+    ) %>% 
+  left_join(bootstrap_table) -> hyp_deploy
+
+hyp_deploy %$% extract(hyp, pvalue < 0.05) %>% paste(collapse = ", ") -> good_hyp
+hyp_deploy %$% extract(hyp, pvalue > 0.05) %>% paste(collapse = ", ") -> bad_hyp
+
+
+hyp_deploy %>% 
+  select(hyp, estimate, number, pvalue) %>%   kable(digits = 4, caption = "Tabla: Evaluación de las hipótesis del estudio. Fuente: Elaboracion propia.")
+
+
+```
+
+## Visualización
+
+Se muestran a continuación algunos gráficos relativos al modelo. En ambas visualizaciones se observan los pesos que tienen las distinas variables en relación a los constructos y los constructos entre ellos.
+
+
+```{r, fig.show = "asis", fig.cap = "Figura: Diagrama del modelo. Fuente: elaboración propia utilizando el software estadístico R [@rbase]."}
+library("lavaanPlot")
+
+lavaanPlot(model = modelo, node_options = list(shape = "box"), edge_options = list(color = "grey"), coefs = T)
+
+```
+
+```{r, fig.show = "asis", fig.cap = "Figura: Diagrama del modelo. Fuente: elaboración propia utilizando el software estadístico R [@rbase]."}
+library("semPlot")
+
+semPaths(
+  modelo,
+  "paths",
+  whatLabels="est", 
+  intercepts=FALSE,
+  residuals = FALSE,
+  style="lisrel",
+  nCharNodes=0, 
+  nCharEdges=0,
+  curveAdjacent = TRUE,
+  title=FALSE, 
+  layout="spring",
+  curvePivot=TRUE,
+  covAtResiduals = FALSE
+  )
+
+
+```
+
+
+```{r, fig.show = "asis", fig.height = 5, fig.width = 8, fig.cap = "Figura: Diagrama del modelo. En verde las relaciones estadísticamente significativas y en rojo aquellas con p-valores mayores a 0.05. El ancho de las líneas indica la fuerza de las relaciones. Fuente: elaboración propia utilizando el software estadístico R [@rbase]."}
+library("igraph")
+library("ggraph")
+library("ggrepel")
+
+set.seed(1231)
+
+formula_modelo %>% 
+  paste(collapse = " ") %>% 
+  str_remove_all("[=~+]") %>% 
+  str_split(" ") %>% 
+  unlist %>% 
+  extract(str_count(.) > 0) %>% 
+  unique %>% 
+  enframe(name = "id", value = "name") %>%
+  extract(c("name", "id")) %>% 
+  mutate(
+    is_direct = 1 - as.numeric(name %in% dic[["constructo"]]),
+    label_size = 3.5 - is_direct
+    ) %>% 
+  arrange(is_direct) -> gg_nodes
+
+
+modelo %>% 
+  parameterestimates %>%
+  filter(op %in% c("=~")) %>% 
+  transmute(
+    lhs, 
+    rhs,
+    estimate = paste(lhs, rhs, sep = "=~"),
+    number = round(est, 2),
+    line_width = abs(est)
+    ) %>% 
+  left_join(bootstrap_table) %>% 
+  mutate(
+    pvalue = ifelse(is.na(pvalue), 0, pvalue),
+    sig = ifelse(pvalue < 0.05, "Sí", "No")
+    ) %>% 
+  select(lhs, rhs, number, line_width, sig) %>% 
+  setNames(c("from", "to", "Est", "line_width", "significance")) -> gg_ties_1
+
+
+modelo %>% 
+  parameterestimates %>%
+  filter(op %in% c("~")) %>% 
+  transmute(
+    lhs, 
+    rhs,
+    estimate = paste(lhs, rhs, sep = "=~"),
+    number = round(est, 2),
+    line_width = abs(est)
+    ) %>% 
+  left_join(bootstrap_table) %>% 
+  mutate(
+    pvalue = ifelse(is.na(pvalue), 0, pvalue),
+    sig = ifelse(pvalue < 0.05, "Sí", "No")
+    ) %>% 
+  select(rhs, lhs, number, line_width, sig) %>% 
+  setNames(c("from", "to", "Est", "line_width", "significance")) -> gg_ties_2
+
+
+bind_rows(gg_ties_1, gg_ties_2) -> gg_ties
+
+graph_from_data_frame(d = gg_ties, vertices = gg_nodes, directed = TRUE) -> final_tree
+
+final_tree %>% ggraph(layout = "gem") + 
+  geom_node_label(
+    aes(label = name, alpha = is_direct),
+    fill = "#dddded", 
+    colour = NA,
+    show.legend = FALSE,
+    label.padding = unit(0.4, "lines")
+    ) +
+  geom_edge_link(
+    aes(label = Est, edge_width = line_width, edge_colour = significance), 
+    # colour = "#bbbbbb",
+    arrow = arrow(45, unit(.2, "cm"), type = "closed"),
+    start_cap = circle(10, 'mm'),
+    end_cap = circle(10, 'mm'),
+    label_size = 3,
+    show.legend = FALSE
+    ) + 
+  geom_node_circle(
+    aes(alpha = 1 - is_direct, r = 45),
+    fill = "#dddded",
+    colour = NA,
+    show.legend = FALSE,
+    ) + 
+  geom_node_text(
+    aes(label = name),
+    size = gg_nodes$label_size
+    ) +
+  scale_alpha(range = 0:1) +
+  scale_edge_width_continuous(range = c(0.5, 1.5)) +
+  scale_color_continuous(low = "#ffffff", high = "#000000") +
+  # geom_node_circle(aes(r = 1, fill = is_direct)) +
+  # coord_flip() +
+  theme_void()
+
+
+
+
+```
+
+## Interpretación y análisis
+
+La tabla resume completamente la información de todo el proceso de modelamiento. Se peude observar el peso de cada ítem sobre cada constructo.
+
+```{r, results = "asis"}
+modelo %>% 
+  parameterestimates %>% 
+  filter(op == "=~") %>% 
+  transmute(
+    lhs, 
+    rhs,
+    estimate = paste(lhs, rhs, sep = "=~"),
+    est
+    ) %>% 
+  left_join(bootstrap_table) %>% 
+  inner_join(completo_analisis, by = c("lhs" = "constructo")) %>% 
+  filter(rhs %in% dic[["nombre_item"]]) %>% 
+  ungroup() %>% 
+  select(
+    lhs,
+    rhs,
+    est,
+    pvalue,
+    varianza_eje_1,
+    alpha_cron, 
+    alpha_gut,
+    shapiro_p,
+    lillie_p
+    ) %>% 
+  setNames(c("Constructo", "Ítem", "Peso", "pValue", "Var ACP", "Cron", "Gutt", "Shapiro", "Lilliefors")) %>%
+  kable(digits = 2, caption = "Tabla: Estadísticos correspondientes a los constructos evaluados. Peso: coeficiente de peso del ítem en el constructo; pValue: p valor de bootstrapping para el coeficiente;Var ACP: Porcentaje de varianza retenida por el primer eje en un ACP; Cron: Alpha de Cronbach; Gutt: Lambda 6 de Guttman; Shapiro: p-valor de la prueba de normalidad de Shapiro Wilks; Lilliefors: p-valor de la prueba de normalidad de Lilliefors. Fuente: elaboración propia.")
+
+
+
+```
+
+
+Los estadísticos de fiabilidad del modelo y la estructura de correlaciones de las variables latentes son mostrados en dos tablas adicionales.
+
+```{r, results = "asis"}
+reliability(modelo) %>%
+  kable(digits = 2, caption = "Tabla: Estadísticos de fiabilidad correspondientes a los constructos evaluados. Fuente: elaboración propia.")
+
+inspect(modelo, "cor.lv") %>%
+  kable(digits = 2, caption = "Tabla: Estructura de correlaciones de los constructos evaluados. Fuente: elaboración propia.")
+
+
+```
+
+
+En el proceso de modelamiento se pueden observar la construcción de las variables latentes `r dic$constructo %>% unique %>% paste(collapse = ", ")` y las relaciones existentes entre ellas. Al respecto se pueden realizar las siguientes observaciones:
+
+Sobre la distribución de las variables latentes es necesario reiterar la no normalidad. La aplicación de las pruebas de hipótesis de normalidad generaron en todos los casos resultados distribucionalmente alejados de la distribución gaussiana. En este sentido, no es posible hacer uso de los intervalos de confianza ni de los p valores calcualdos por defecto en el modelo.
+
+El procedimiento de bootstrapping de `r bootstrap_runs` iteraciones permite establecer la significancia de los coeficientes del modelo. De esta forma, los valores de los coeficientes son los calculados en el modelo y los valores correspondientes a intervalos de confianza y p valores son los calculados en el bootstrapping.
+
+Respecto a las hipótesis planteadas los resultados indican que las hipótesis `r good_hyp` tuvieron resultados estadísticamente significativos a su favor.
+
+
+
+
+```{r}
+cfa_model %>% summary(standardized = TRUE, fit.measures = TRUE)
+modelo %>% summary(standardized = TRUE, fit.measures = TRUE)
+resid(modelo, type = "normalized")
+resid(modelo, type = "standardized")
+lavResiduals(modelo, type = "cor")
+modindices(modelo, sort. = TRUE, minimum.value = 2.58)
+fitted(modelo)
+lavCor(modelo)
+reliability(modelo)
+
+
+
+
+
+
+```
 
 
 
